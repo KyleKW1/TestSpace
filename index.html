@@ -336,6 +336,7 @@ html, body {
     <!-- MAP -->
     <div class="map-wrap">
       <div id="googleMap"></div>
+      <div id="mapDebug" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:#1fdf72;padding:20px;border-radius:8px;font-family:monospace;font-size:12px;z-index:999;text-align:left;max-width:300px;pointer-events:none;"></div>
       <div class="map-controls">
         <button class="mc-btn active" id="btnRoad"   onclick="setMapType('roadmap',this)">🗺 Map</button>
         <button class="mc-btn"        id="btnSat"    onclick="setMapType('satellite',this)">🛰 Satellite</button>
@@ -445,6 +446,26 @@ function initMap() {
   setTimeout(triggerResize, 100);
   setTimeout(triggerResize, 500);
   setTimeout(triggerResize, 1500);
+
+  // Debug overlay
+  function debugMap() {
+    const el   = document.getElementById('googleMap');
+    const wrap = document.querySelector('.map-wrap');
+    const main = document.querySelector('.main');
+    const rect = el.getBoundingClientRect();
+    const dbg  = document.getElementById('mapDebug');
+    if (dbg) dbg.innerHTML =
+      '<strong style="color:#fff">MAP DEBUG</strong><br><br>' +
+      'googleMap: <b>' + Math.round(rect.width) + ' x ' + Math.round(rect.height) + 'px</b><br>' +
+      'map-wrap h: ' + (wrap ? wrap.offsetHeight : '?') + 'px<br>' +
+      'main h: ' + (main ? main.offsetHeight : '?') + 'px<br>' +
+      'gmap obj: ' + (!!gmap) + '<br>' +
+      'google API: ' + (typeof google !== 'undefined') + '<br>' +
+      'viewport: ' + window.innerWidth + 'x' + window.innerHeight;
+  }
+  setTimeout(debugMap, 500);
+  setTimeout(debugMap, 1500);
+  setTimeout(debugMap, 3000);
 }
 
 /* ─────────────────────────────────────────
@@ -1082,5 +1103,4 @@ setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
 })();
 </script>
 </body>
-</html>
 </html>
