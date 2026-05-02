@@ -16,7 +16,6 @@
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;}
 
-/* LAYOUT */
 .app{display:grid;grid-template-rows:var(--nav-h) auto 1fr;height:100vh;}
 .main{display:grid;grid-template-columns:360px 1fr;overflow:hidden;}
 @media(max-width:768px){.main{grid-template-columns:1fr;grid-template-rows:1fr auto;}.sidebar{order:2;max-height:45vh;}.map-wrap{order:1;}}
@@ -39,6 +38,30 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .go-top{background:var(--green);color:#050810;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;flex-shrink:0;transition:opacity 0.2s;letter-spacing:0.3px;}
 .go-top:hover{opacity:0.85;}
 #clock{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;}
+
+/* AUTOCOMPLETE DROPDOWN */
+.ac-dropdown{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--card);border:1.5px solid var(--border2);
+  border-radius:10px;z-index:9999;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  display:none;
+}
+.ac-dropdown.open{display:block;}
+.ac-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 12px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+  transition:background 0.15s;
+}
+.ac-item:last-child{border-bottom:none;}
+.ac-item:hover,.ac-item.focused{background:rgba(61,158,245,0.1);}
+.ac-pin{font-size:14px;flex-shrink:0;margin-top:1px;}
+.ac-body{flex:1;min-width:0;}
+.ac-main{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-sub{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+.ac-loading{padding:12px;text-align:center;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.ac-empty{padding:12px;text-align:center;font-size:11px;color:var(--red);font-family:'DM Mono',monospace;}
 
 /* CONFIRM BAR */
 .confirm-bar{background:var(--surface);border-bottom:1px solid var(--border);overflow:hidden;max-height:0;transition:max-height 0.35s ease;z-index:150;position:relative;}
@@ -168,16 +191,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <div class="topnav">
     <div class="logo">clear<em>path</em></div>
     <div class="od-row">
-      <div class="od-wrap">
-        <input class="od-field" id="originInput" placeholder="From: e.g. 17 Dunrobin Ave, Kingston"
-          autocomplete="off" oninput="onEdit('origin')" onkeydown="onKey(event)">
+      <div class="od-wrap" id="originWrap">
+        <input class="od-field" id="originInput" placeholder="From: e.g. Half Way Tree"
+          autocomplete="off" oninput="onInput(event,'origin')" onkeydown="onKey(event,'origin')">
         <span class="od-icon" id="originIcon">📍</span>
+        <div class="ac-dropdown" id="originDrop"></div>
       </div>
       <button class="od-swap" onclick="swapLocations()" title="Swap">⇅</button>
-      <div class="od-wrap">
+      <div class="od-wrap" id="destWrap">
         <input class="od-field" id="destInput" placeholder="To: e.g. New Kingston"
-          autocomplete="off" oninput="onEdit('dest')" onkeydown="onKey(event)">
+          autocomplete="off" oninput="onInput(event,'dest')" onkeydown="onKey(event,'dest')">
         <span class="od-icon" id="destIcon">🏢</span>
+        <div class="ac-dropdown" id="destDrop"></div>
       </div>
       <button class="go-top" onclick="handleGo()">GO</button>
     </div>
@@ -305,7 +330,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <button class="refresh-btn" onclick="rerun()">↺ Refresh</button>
       <div class="key-notice" id="keyNotice">
         ⚠ Add your Google Maps API key to index.html<br>
-        Find <code>GOOGLE_MAPS_KEY</code> and replace <code>AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA</code><br>
+        Find <code>GOOGLE_MAPS_KEY</code> and replace the placeholder<br>
         <a href="https://console.cloud.google.com" target="_blank">Get a key at Google Cloud →</a>
       </div>
     </div>
@@ -313,14 +338,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-// REPLACE YOUR_KEY_HERE with your Google Maps API Key
-// Enable these APIs in Google Cloud Console:
-//   • Maps JavaScript API
-//   • Directions API
-//   • Places API
-//   • Geocoding API
-// ══════════════════════════════════════════════
 const GOOGLE_MAPS_KEY = "AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA";
 
 const DEFAULTS = {
@@ -331,18 +348,24 @@ const DEFAULTS = {
 const REFRESH_MS = 90000;
 const COLORS = ['#1fdf72','#f5a41f','#ef4343','#9b6dff'];
 
-let gmap, dirSvc, geocoder, traffic;
+let gmap, dirSvc, placesService, geocoder, traffic;
 let renderers=[], allRoutes=[], cache=null;
 let selIdx=0, navSteps=[], navMode=false;
 let watchId=null, stepIdx=0, userMk=null;
 let trafficOn=true;
-let cOrigin=null, cDest=null; // confirmed place objects
+let cOrigin=null, cDest=null;
+
+// Autocomplete state per field
+const acState = {
+  origin: { timer: null, focusIdx: -1, suggestions: [] },
+  dest:   { timer: null, focusIdx: -1, suggestions: [] },
+};
 
 /* ── CLOCK ── */
 const tick=()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}); };
 setInterval(tick,1000); tick();
 
-/* ── MAP INIT (called by Google Maps API callback) ── */
+/* ── MAP INIT ── */
 function initMap(){
   gmap = new google.maps.Map(document.getElementById('googleMap'),{
     center:{lat:DEFAULTS.homeLat,lng:DEFAULTS.homeLng}, zoom:13,
@@ -356,123 +379,214 @@ function initMap(){
   traffic  = new google.maps.TrafficLayer();
   traffic.setMap(gmap);
 
-  /* Place Autocomplete — restricts to Jamaica, gives instant confirmation */
-  const makeAC = (inputId, which) => {
-    const ac = new google.maps.places.Autocomplete(
-      document.getElementById(inputId),
-      { componentRestrictions:{country:'jm'}, fields:['geometry','formatted_address','name'] }
-    );
-    ac.addListener('place_changed',()=>{
-      const p = ac.getPlace();
-      if(p && p.geometry){
-        setConfirmed(which, p.name||p.formatted_address, p.formatted_address, p.geometry.location.lat(), p.geometry.location.lng());
-        toast('✅ '+p.name+' confirmed','ok');
-      } else {
-        setFieldState(which,'error');
-        toast('❌ Could not confirm — pick a suggestion from the dropdown');
-      }
-    });
-  };
-  makeAC('originInput','origin');
-  makeAC('destInput','dest');
+  // Use a dummy map div for PlacesService
+  placesService = new google.maps.places.PlacesService(document.getElementById('googleMap'));
 
   // Pre-fill defaults
   document.getElementById('originInput').value = DEFAULTS.homeLabel;
   document.getElementById('destInput').value   = DEFAULTS.workLabel;
 
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#originWrap')) closeDrop('origin');
+    if (!e.target.closest('#destWrap'))   closeDrop('dest');
+  });
+
   buildChart();
   renderIncidents();
 }
 
-/* ── FIELD EVENTS ── */
-function onEdit(which){
-  if(which==='origin'){cOrigin=null;setFieldState('origin','neutral');}
-  else               {cDest=null;  setFieldState('dest','neutral');  }
-  closeBar();
-}
-function onKey(e){ if(e.key==='Enter') handleGo(); }
+/* ── AUTOCOMPLETE INPUT HANDLER ── */
+function onInput(e, which) {
+  const val = e.target.value.trim();
 
-function setFieldState(which,state){
-  const f=document.getElementById(which==='origin'?'originInput':'destInput');
-  const i=document.getElementById(which==='origin'?'originIcon':'destIcon');
-  f.className='od-field';
-  if(state==='confirmed'){f.classList.add('confirmed');i.textContent='✅';}
-  else if(state==='error'){f.classList.add('error');i.textContent='❌';}
-  else if(state==='checking'){f.classList.add('checking');i.textContent='⏳';}
-  else{i.textContent=which==='origin'?'📍':'🏢';}
+  // Clear confirmed state when user edits
+  if (which === 'origin') { cOrigin = null; setFieldState('origin','neutral'); }
+  else                    { cDest   = null; setFieldState('dest','neutral');   }
+  closeBar();
+
+  const st = acState[which];
+  clearTimeout(st.timer);
+
+  if (val.length < 2) { closeDrop(which); return; }
+
+  // Show loading
+  showDrop(which, '<div class="ac-loading"><span class="spin">◌</span> Searching…</div>');
+
+  // Debounce 300ms then fetch suggestions
+  st.timer = setTimeout(() => fetchSuggestions(which, val), 300);
+}
+
+/* ── FETCH PLACE SUGGESTIONS via AutocompleteService ── */
+function fetchSuggestions(which, input) {
+  if (!window.google) return;
+
+  const svc = new google.maps.places.AutocompleteService();
+  svc.getPlacePredictions(
+    {
+      input,
+      componentRestrictions: { country: 'jm' },
+      types: ['geocode', 'establishment'],
+    },
+    (predictions, status) => {
+      const st = acState[which];
+      st.focusIdx = -1;
+
+      if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length) {
+        st.suggestions = predictions;
+        const html = predictions.map((p, i) => {
+          const main = p.structured_formatting.main_text || p.description;
+          const sec  = p.structured_formatting.secondary_text || '';
+          return `<div class="ac-item" data-idx="${i}" onmousedown="pickSuggestion(event,'${which}',${i})">
+            <div class="ac-pin">📍</div>
+            <div class="ac-body">
+              <div class="ac-main">${escHtml(main)}</div>
+              ${sec ? `<div class="ac-sub">${escHtml(sec)}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('');
+        showDrop(which, html);
+      } else {
+        st.suggestions = [];
+        showDrop(which, `<div class="ac-empty">No results — try a different address</div>`);
+      }
+    }
+  );
+}
+
+/* ── PICK A SUGGESTION ── */
+function pickSuggestion(e, which, idx) {
+  e.preventDefault(); // prevent blur firing first
+  const pred = acState[which].suggestions[idx];
+  if (!pred) return;
+
+  // Get full place details (lat/lng)
+  placesService.getDetails(
+    { placeId: pred.place_id, fields: ['geometry','formatted_address','name'] },
+    (place, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry) {
+        const name = place.name || pred.structured_formatting.main_text;
+        const addr = place.formatted_address || pred.description;
+        const lat  = place.geometry.location.lat();
+        const lng  = place.geometry.location.lng();
+        setConfirmed(which, name, addr, lat, lng);
+        toast('✅ ' + name + ' confirmed', 'ok');
+        closeDrop(which);
+      } else {
+        toast('❌ Could not get location details — try another suggestion');
+      }
+    }
+  );
+}
+
+/* ── KEYBOARD NAVIGATION IN DROPDOWN ── */
+function onKey(e, which) {
+  const st  = acState[which];
+  const drop = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
+  const items = drop.querySelectorAll('.ac-item');
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    st.focusIdx = Math.min(st.focusIdx + 1, items.length - 1);
+    highlightItem(items, st.focusIdx);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    st.focusIdx = Math.max(st.focusIdx - 1, 0);
+    highlightItem(items, st.focusIdx);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (st.focusIdx >= 0 && items[st.focusIdx]) {
+      items[st.focusIdx].dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+    } else if (drop.classList.contains('open') && items.length === 1) {
+      // Auto-pick if only one suggestion
+      items[0].dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+    } else if (!drop.classList.contains('open')) {
+      handleGo();
+    }
+  } else if (e.key === 'Escape') {
+    closeDrop(which);
+  }
+}
+
+function highlightItem(items, idx) {
+  items.forEach((el, i) => el.classList.toggle('focused', i === idx));
+}
+
+/* ── DROPDOWN HELPERS ── */
+function showDrop(which, html) {
+  const drop = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
+  drop.innerHTML = html;
+  drop.classList.add('open');
+}
+
+function closeDrop(which) {
+  const drop = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
+  drop.classList.remove('open');
+}
+
+/* ── HTML ESCAPE ── */
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── FIELD STATE ── */
+function setFieldState(which, state){
+  const f = document.getElementById(which==='origin' ? 'originInput' : 'destInput');
+  const i = document.getElementById(which==='origin' ? 'originIcon'  : 'destIcon');
+  f.className = 'od-field';
+  if(state==='confirmed'){ f.classList.add('confirmed'); i.textContent='✅'; }
+  else if(state==='error'){ f.classList.add('error');    i.textContent='❌'; }
+  else if(state==='checking'){ f.classList.add('checking'); i.textContent='⏳'; }
+  else { i.textContent = which==='origin' ? '📍' : '🏢'; }
 }
 
 /* ── CONFIRM A PLACE ── */
 function setConfirmed(which, name, addr, lat, lng){
-  const obj={name,addr,lat,lng};
+  const obj = {name, addr, lat, lng};
   if(which==='origin'){
-    cOrigin=obj;
+    cOrigin = obj;
     setFieldState('origin','confirmed');
-    document.getElementById('originInput').value=name;
-    document.getElementById('oName').textContent=name;
-    document.getElementById('oAddr').textContent=addr||name;
-    document.getElementById('oCoords').textContent=lat.toFixed(5)+', '+lng.toFixed(5);
-    document.getElementById('oCheck').textContent='✅';
+    document.getElementById('originInput').value = name;
+    document.getElementById('oName').textContent  = name;
+    document.getElementById('oAddr').textContent  = addr || name;
+    document.getElementById('oCoords').textContent= lat.toFixed(5)+', '+lng.toFixed(5);
   } else {
-    cDest=obj;
+    cDest = obj;
     setFieldState('dest','confirmed');
-    document.getElementById('destInput').value=name;
-    document.getElementById('dName').textContent=name;
-    document.getElementById('dAddr').textContent=addr||name;
-    document.getElementById('dCoords').textContent=lat.toFixed(5)+', '+lng.toFixed(5);
-    document.getElementById('dCheck').textContent='✅';
+    document.getElementById('destInput').value = name;
+    document.getElementById('dName').textContent  = name;
+    document.getElementById('dAddr').textContent  = addr || name;
+    document.getElementById('dCoords').textContent= lat.toFixed(5)+', '+lng.toFixed(5);
   }
   if(cOrigin && cDest) openBar();
 }
 
-function openBar(){ document.getElementById('confirmBar').classList.add('open'); }
-function closeBar(){ document.getElementById('confirmBar').classList.remove('open'); }
+function openBar()  { document.getElementById('confirmBar').classList.add('open'); }
+function closeBar() { document.getElementById('confirmBar').classList.remove('open'); }
 
 function editField(which){
-  if(which==='origin'){cOrigin=null;setFieldState('origin','neutral');document.getElementById('originInput').focus();}
-  else               {cDest=null;  setFieldState('dest','neutral');  document.getElementById('destInput').focus();  }
+  if(which==='origin'){ cOrigin=null; setFieldState('origin','neutral'); document.getElementById('originInput').focus(); }
+  else               { cDest=null;   setFieldState('dest','neutral');   document.getElementById('destInput').focus();   }
   closeBar();
-}
-
-/* ── GEOCODE FALLBACK (when user types manually without picking autocomplete) ── */
-function geocodeThen(which, text, cb){
-  setFieldState(which,'checking');
-  geocoder.geocode({address:text+', Jamaica'},(results,status)=>{
-    if(status==='OK' && results[0]){
-      const r=results[0];
-      const lat=r.geometry.location.lat(), lng=r.geometry.location.lng();
-      const name=r.address_components[0]?.long_name||r.formatted_address.split(',')[0];
-      setConfirmed(which, name, r.formatted_address, lat, lng);
-      toast('✅ '+name+' confirmed','ok');
-      cb(true);
-    } else {
-      setFieldState(which,'error');
-      toast('❌ "'+text+'" not found — check spelling or pick a suggestion');
-      cb(false);
-    }
-  });
 }
 
 /* ── GO HANDLER ── */
 function handleGo(){
-  const oText=document.getElementById('originInput').value.trim();
-  const dText=document.getElementById('destInput').value.trim();
-  if(!oText||!dText){ toast('⚠ Enter both a start and destination'); return; }
-
-  // If both already confirmed → route immediately
-  if(cOrigin && cDest){ runDir(); return; }
-
-  // Geocode whichever is not yet confirmed, then route
   if(!cOrigin && !cDest){
-    geocodeThen('origin',oText,(ok)=>{
-      if(!ok) return;
-      geocodeThen('dest',dText,(ok2)=>{ if(ok2) runDir(); });
-    });
-  } else if(!cOrigin){
-    geocodeThen('origin',oText,(ok)=>{ if(ok) runDir(); });
-  } else {
-    geocodeThen('dest',dText,(ok)=>{ if(ok) runDir(); });
+    toast('👆 Type an address and pick a suggestion from the list');
+    return;
   }
+  if(!cOrigin){
+    toast('👆 Pick an origin suggestion from the dropdown');
+    document.getElementById('originInput').focus();
+    return;
+  }
+  if(!cDest){
+    toast('👆 Pick a destination suggestion from the dropdown');
+    document.getElementById('destInput').focus();
+    return;
+  }
+  runDir();
 }
 
 /* ── RUN DIRECTIONS ── */
@@ -514,10 +628,6 @@ function drawRoutes(res){
       map:gmap, routeIndex:i,
       suppressInfoWindows:true, suppressMarkers:i>0,
       polylineOptions:{strokeColor:COLORS[i%COLORS.length],strokeOpacity:i===selIdx?0.95:0.28,strokeWeight:i===selIdx?7:3,zIndex:i===selIdx?10:1},
-      markerOptions:{
-        origin:{icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#3d9ef5',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}},
-        destination:{icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#1fdf72',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}},
-      },
     });
     r.setDirections(res);
     renderers.push(r);
@@ -668,6 +778,7 @@ function setMapType(t,btn){
 }
 function toggleTraffic(btn){trafficOn=!trafficOn;traffic.setMap(trafficOn?gmap:null);btn.classList.toggle('active',trafficOn);}
 function goMyLoc(){if(!gmap||!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(p=>{gmap.setCenter({lat:p.coords.latitude,lng:p.coords.longitude});gmap.setZoom(16);});}
+
 function swapLocations(){
   const ov=document.getElementById('originInput').value,dv=document.getElementById('destInput').value;
   document.getElementById('originInput').value=dv;
@@ -676,6 +787,7 @@ function swapLocations(){
   if(cOrigin)setFieldState('origin','confirmed'); else setFieldState('origin','neutral');
   if(cDest)  setFieldState('dest','confirmed');   else setFieldState('dest','neutral');
   closeBar();
+  if(cOrigin && cDest) openBar();
 }
 
 /* ── TAB ── */
@@ -740,7 +852,6 @@ function darkStyle(){return[{elementType:'geometry',stylers:[{color:'#0c1220'}]}
 setInterval(()=>{ if(!navMode&&cOrigin&&cDest) runDir(); }, REFRESH_MS);
 </script>
 
-<!-- Load Google Maps API — set GOOGLE_MAPS_KEY above -->
 <script>
 (function(){
   const k=GOOGLE_MAPS_KEY;
