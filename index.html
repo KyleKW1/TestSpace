@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClearPath — Traffic Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0d14; --surface: #111520; --card: #161c2e; --border: #1e2840;
+    --green: #22d97a; --amber: #f5a623; --red: #f05252; --blue: #4fa3f7;
+    --text: #e8edf8; --muted: #7a87a8;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; height: 100vh; overflow: hidden; }
+  .app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+
+  /* TOP BAR */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo span { color: var(--green); }
+  .saved-locations { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+  .loc-pill { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-family: 'DM Mono', monospace; cursor: pointer; color: var(--muted); transition: all 0.2s; white-space: nowrap; }
+  .loc-pill.active { border-color: var(--blue); color: var(--blue); background: rgba(79,163,247,0.08); }
+  .loc-pill:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+  #clock { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  /* MAIN */
+  .main { display: grid; grid-template-columns: 340px 1fr; overflow: hidden; }
+  @media (max-width: 700px) { .main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }
+
+  /* SIDEBAR */
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .section-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+
+  /* ROUTE CARDS */
+  .route-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s; margin-bottom: 8px; }
+  .route-card:last-child { margin-bottom: 0; }
+  .route-card:hover { border-color: var(--muted); }
+  .route-card.selected { border-color: var(--blue); background: rgba(79,163,247,0.06); }
+  .route-card.best { border-color: var(--green); }
+  .route-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .route-name { font-size: 14px; font-weight: 600; }
+  .route-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; font-family: 'DM Mono', monospace; }
+  .badge-green { background: rgba(34,217,122,0.15); color: var(--green); }
+  .badge-amber { background: rgba(245,166,35,0.15); color: var(--amber); }
+  .badge-red   { background: rgba(240,82,82,0.15);  color: var(--red); }
+  .route-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .meta-item  { text-align: center; }
+  .meta-val   { font-size: 18px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .meta-key   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .traffic-bar { height: 4px; border-radius: 2px; margin-top: 10px; background: var(--border); overflow: hidden; }
+  .traffic-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .fill-green { background: linear-gradient(90deg,#1aac62,var(--green)); }
+  .fill-amber { background: linear-gradient(90deg,#c4851c,var(--amber)); }
+  .fill-red   { background: linear-gradient(90deg,#c43d3d,var(--red)); }
+
+  /* DEPARTURE CHART */
+  .depart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .chart-wrap  { position: relative; height: 90px; margin-top: 12px; }
+  .chart-bars  { display: flex; align-items: flex-end; gap: 3px; height: 70px; }
+  .bar-col     { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+  .bar         { border-radius: 3px 3px 0 0; width: 100%; transition: all 0.3s; position: relative; }
+  .bar-label   { font-size: 9px; font-family: 'DM Mono', monospace; color: var(--muted); text-align: center; margin-top: 2px; }
+  .bar.best-bar { outline: 1px solid var(--green); outline-offset: 1px; }
+  .best-tag    { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 8px; color: var(--green); white-space: nowrap; font-weight: 700; }
+  .now-marker  { position: absolute; bottom: 0; width: 2px; background: var(--blue); top: 0; transition: left 0.3s; }
+  .now-label   { position: absolute; top: -14px; font-size: 9px; color: var(--blue); transform: translateX(-50%); font-family: 'DM Mono', monospace; white-space: nowrap; }
+
+  /* INCIDENTS */
+  .incident-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .incident-item:last-child { border: none; }
+  .inc-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+  .inc-text { font-size: 12px; line-height: 1.5; color: var(--muted); }
+  .inc-text strong { color: var(--text); font-weight: 600; }
+
+  /* STATUS BANNER */
+  .status-banner { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-family: 'DM Mono', monospace; margin-bottom: 4px; }
+  .status-banner.loading { background: rgba(79,163,247,0.1); color: var(--blue); border: 1px solid rgba(79,163,247,0.2); }
+  .status-banner.live    { background: rgba(34,217,122,0.1); color: var(--green); border: 1px solid rgba(34,217,122,0.2); }
+  .status-banner.demo    { background: rgba(245,166,35,0.1); color: var(--amber); border: 1px solid rgba(245,166,35,0.2); }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MAP */
+  .map-area { position: relative; overflow: hidden; background: #0c1220; }
+  canvas#mapCanvas { display: block; width: 100%; height: 100%; }
+  .map-overlay { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .map-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; font-family: 'Syne', sans-serif; color: var(--text); cursor: pointer; transition: all 0.2s; font-weight: 600; }
+  .map-btn:hover  { border-color: var(--blue); color: var(--blue); }
+  .map-btn.active { border-color: var(--green); color: var(--green); background: rgba(34,217,122,0.08); }
+  .live-chip { position: absolute; bottom: 12px; left: 12px; background: rgba(10,13,20,0.85); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-family: 'DM Mono', monospace; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(4px); }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(1.3); } }
+  .eta-chip { position: absolute; top: 12px; left: 12px; background: rgba(10,13,20,0.9); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; backdrop-filter: blur(4px); }
+  .eta-main { font-size: 26px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--green); line-height: 1; }
+  .eta-sub  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  #refreshBtn { position: absolute; bottom: 12px; right: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+  #refreshBtn:hover { border-color: var(--green); color: var(--green); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="logo">clear<span>path</span></div>
+    <div class="saved-locations">
+      <div class="loc-pill active" id="pill0" onclick="setLoc(0)">🏠 Home — Kingston</div>
+      <div class="loc-pill" id="pill1" onclick="setLoc(1)">🏢 Work — New Kingston</div>
+      <div class="loc-pill" onclick="addLoc()">＋ Add place</div>
+    </div>
+    <div id="clock"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="sidebar">
+
+      <!-- Status banner -->
+      <div class="status-banner loading" id="statusBanner">
+        <span class="spin">◌</span> <span id="statusText">Fetching live traffic…</span>
+      </div>
+
+      <!-- Routes -->
+      <div>
+        <div class="section-label">Best routes now</div>
+        <div id="routeList">
+          <!-- populated by JS -->
+          <div style="color:var(--muted);font-size:13px;padding:12px 0">Loading routes…</div>
+        </div>
+      </div>
+
+      <!-- Departure Chart -->
+      <div class="depart-card">
+        <div class="section-label">Best time to leave</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Congestion forecast — next 3 hours</div>
+        <div class="chart-wrap">
+          <div class="chart-bars" id="chartBars"></div>
+          <div class="now-marker" id="nowMarker"><div class="now-label">now</div></div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+          Best window: <strong style="color:var(--green)" id="bestWindow">—</strong> · Save ~19 min
+        </div>
+      </div>
+
+      <!-- Incidents -->
+      <div>
+        <div class="section-label">Live incidents</div>
+        <div id="incidents">
+          <div style="color:var(--muted);font-size:12px;padding:8px 0">Loading incidents…</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MAP -->
+    <div class="map-area">
+      <canvas id="mapCanvas"></canvas>
+      <div class="eta-chip">
+        <div class="eta-main" id="etaMain">—</div>
+        <div class="eta-sub"  id="etaSub">Fetching best route…</div>
+      </div>
+      <div class="map-overlay">
+        <button class="map-btn active" onclick="toggleLayer(this,'heat')">Heatmap</button>
+        <button class="map-btn" onclick="toggleLayer(this,'satellite')">Satellite</button>
+        <button class="map-btn" onclick="toggleLayer(this,'incidents')">Incidents</button>
+      </div>
+      <div class="live-chip">
+        <div class="pulse"></div>
+        <span id="liveLabel">Connecting…</span>
+      </div>
+      <button id="refreshBtn" onclick="loadAllData()">↺ Refresh</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   CONFIG — edit origins/destinations here
+   Coords: latitude,longitude
+═══════════════════════════════════════════════ */
+const CONFIG = {
+  home:        { lat: 17.9970, lon: -76.7936, label: "Home — Kingston"     },
+  work:        { lat: 18.0100, lon: -76.7890, label: "Work — New Kingston" },
+  bbox:        "-76.85,17.95,-76.75,18.05",
+  refreshMs:   60000,   // auto-refresh every 60 seconds
+};
+
+/* ═══════════════════════════════════════════════
+   CANVAS MAP
+═══════════════════════════════════════════════ */
+const canvas = document.getElementById('mapCanvas');
+const ctx    = canvas.getContext('2d');
+let showHeat = true, selectedRoute = 0, frame = 0;
+let liveHotspots = null;
+
+const routeDefs = [
+  { color:'#22d97a', points:[[0.15,0.75],[0.22,0.60],[0.35,0.42],[0.48,0.30],[0.60,0.22],[0.72,0.18]] },
+  { color:'#f5a623', points:[[0.15,0.75],[0.28,0.68],[0.42,0.58],[0.52,0.45],[0.62,0.30],[0.72,0.18]] },
+  { color:'#f05252', points:[[0.15,0.75],[0.20,0.80],[0.35,0.78],[0.50,0.65],[0.62,0.45],[0.72,0.18]] },
+];
+
+const fallbackHotspots = [
+  { x:0.42,y:0.58,r:0.09,intensity:0.9, color:'255,50,50'  },
+  { x:0.50,y:0.65,r:0.10,intensity:0.85,color:'255,100,30' },
+  { x:0.28,y:0.68,r:0.07,intensity:0.70,color:'255,160,30' },
+  { x:0.22,y:0.60,r:0.05,intensity:0.20,color:'50,200,100' },
+  { x:0.35,y:0.42,r:0.04,intensity:0.15,color:'50,210,100' },
+  { x:0.62,y:0.30,r:0.06,intensity:0.50,color:'255,150,30' },
+];
+
+const buildings = Array.from({length:60},()=>({
+  x:Math.random(),y:Math.random(),
+  w:0.015+Math.random()*0.025,h:0.015+Math.random()*0.03,
+  b:0.3+Math.random()*0.3
+}));
+
+function resize(){
+  canvas.width  = canvas.parentElement.offsetWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+}
+
+function drawMap(){
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0c1220'; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='rgba(30,40,65,0.8)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=W*0.08){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=H*0.08){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  buildings.forEach(b=>{
+    ctx.fillStyle=`rgba(${Math.floor(b.b*60)},${Math.floor(b.b*70)},${Math.floor(b.b*100)},0.6)`;
+    ctx.fillRect(b.x*W,b.y*H,b.w*W,b.h*H);
+  });
+
+  if(showHeat){
+    const hs = liveHotspots || fallbackHotspots;
+    hs.forEach(h=>{
+      const cx=h.x*W,cy=h.y*H,r=h.r*Math.min(W,H);
+      const wave=1+0.05*Math.sin(frame*0.05);
+      const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,r*wave);
+      grd.addColorStop(0,  `rgba(${h.color},${(h.intensity*0.55).toFixed(2)})`);
+      grd.addColorStop(0.5,`rgba(${h.color},${(h.intensity*0.20).toFixed(2)})`);
+      grd.addColorStop(1,  'rgba(0,0,0,0)');
+      ctx.fillStyle=grd;
+      ctx.beginPath();ctx.arc(cx,cy,r*wave,0,Math.PI*2);ctx.fill();
+    });
+  }
+
+  routeDefs.forEach((r,i)=>{if(i!==selectedRoute)drawRoute(r,0.25,2,i);});
+  drawRoute(routeDefs[selectedRoute],1,3.5,selectedRoute);
+
+  const o=routeDefs[0].points[0], d=routeDefs[0].points[routeDefs[0].points.length-1];
+  drawPin(o[0]*W,o[1]*H,'#4fa3f7','H');
+  drawPin(d[0]*W,d[1]*H,'#22d97a','W');
+
+  frame++;
+  requestAnimationFrame(drawMap);
+}
+
+function drawRoute(r,alpha,width,idx){
+  const W=canvas.width,H=canvas.height,pts=r.points;
+  ctx.globalAlpha=alpha; ctx.strokeStyle=r.color;
+  ctx.lineWidth=width; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(pts[0][0]*W,pts[0][1]*H);
+  for(let i=1;i<pts.length;i++){
+    const mx=(pts[i-1][0]+pts[i][0])/2*W, my=(pts[i-1][1]+pts[i][1])/2*H;
+    ctx.quadraticCurveTo(pts[i-1][0]*W,pts[i-1][1]*H,mx,my);
+  }
+  ctx.stroke(); ctx.globalAlpha=1;
+
+  if(idx===selectedRoute){
+    const progress=((frame*0.8)%(pts.length*30))/(pts.length*30);
+    let totalLen=0; const lens=[];
+    for(let i=1;i<pts.length;i++){
+      const l=Math.hypot((pts[i][0]-pts[i-1][0])*W,(pts[i][1]-pts[i-1][1])*H);
+      lens.push(l); totalLen+=l;
+    }
+    let rem=progress*totalLen,seg=0;
+    while(seg<lens.length-1&&rem>lens[seg]){rem-=lens[seg];seg++;}
+    const t=rem/lens[seg];
+    const px=(pts[seg][0]+(pts[seg+1][0]-pts[seg][0])*t)*W;
+    const py=(pts[seg][1]+(pts[seg+1][1]-pts[seg][1])*t)*H;
+    ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.fillStyle=r.color;ctx.globalAlpha=0.9;ctx.fill();
+    ctx.beginPath();ctx.arc(px,py,9,0,Math.PI*2);
+    ctx.fillStyle=r.color;ctx.globalAlpha=0.25;ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+function drawPin(x,y,color,label){
+  ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);
+  ctx.fillStyle=color;ctx.globalAlpha=0.2;ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);
+  ctx.fillStyle=color;ctx.fill();
+  ctx.fillStyle='#0c1220';ctx.font='bold 7px Syne';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(label,x,y);
+}
+
+/* ═══════════════════════════════════════════════
+   API CALLS — all routed through Netlify functions
+═══════════════════════════════════════════════ */
+async function fetchRoutes(){
+  const origin      = `${CONFIG.home.lat},${CONFIG.home.lon}`;
+  const destination = `${CONFIG.work.lat},${CONFIG.work.lon}`;
+
+  // Try Google Maps directions first
+  const res = await fetch(`/api/google-maps?type=directions&origin=${origin}&destination=${destination}&alternatives=true`);
+  if(!res.ok) throw new Error('Google Maps API error');
+  const data = await res.json();
+
+  if(data.status !== 'OK' || !data.routes?.length) throw new Error('No routes returned');
+
+  return data.routes.map((r,i)=>{
+    const leg = r.legs[0];
+    const congestion = Math.round((leg.duration_in_traffic?.value / leg.duration?.value - 1) * 100);
+    return {
+      name:       r.summary || `Route ${i+1}`,
+      eta:        Math.round((leg.duration_in_traffic?.value || leg.duration.value) / 60),
+      distance:   (leg.distance.value / 1000).toFixed(1),
+      congestion: Math.max(0, Math.min(99, congestion || i * 30)),
+    };
+  });
+}
+
+async function fetchIncidents(){
+  const res = await fetch(`/api/tomtom-traffic?type=incidents&bbox=${CONFIG.bbox}`);
+  if(!res.ok) throw new Error('TomTom incidents error');
+  const data = await res.json();
+  return data.incidents || [];
+}
+
+async function fetchFlow(){
+  const res = await fetch(`/api/tomtom-traffic?type=flow&bbox=${CONFIG.bbox}`);
+  if(!res.ok) throw new Error('TomTom flow error');
+  return await res.json();
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER FUNCTIONS
+═══════════════════════════════════════════════ */
+function renderRoutes(routes){
+  const colors   = ['green','amber','red'];
+  const labels   = ['LEAST TRAFFIC','MODERATE','HEAVY TRAFFIC'];
+  const fills    = ['fill-green','fill-amber','fill-red'];
+  const etaColor = ['var(--green)','var(--amber)','var(--red)'];
+
+  // Sort by ETA ascending so best route is always first
+  routes.sort((a,b)=>a.eta-b.eta);
+
+  const container = document.getElementById('routeList');
+  container.innerHTML = routes.map((r,i)=>`
+    <div class="route-card${i===0?' best':''} ${i===selectedRoute?' selected':''}" id="r${i}" onclick="selectRoute(${i},${r.eta},'${r.name}')">
+      <div class="route-header">
+        <div class="route-name">Via ${r.name}</div>
+        <div class="route-badge badge-${colors[Math.min(i,2)]}">${labels[Math.min(i,2)]}</div>
+      </div>
+      <div class="route-meta">
+        <div class="meta-item">
+          <div class="meta-val" style="color:${etaColor[Math.min(i,2)]}">${r.eta}<span style="font-size:12px">min</span></div>
+          <div class="meta-key">ETA</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-val">${r.distance}<span style="font-size:12px">km</span></div>
+          <div class="meta-key">Distance</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-val" style="color:${etaColor[Math.min(i,2)]}">${r.congestion}%</div>
+          <div class="meta-key">Congestion</div>
+        </div>
+      </div>
+      <div class="traffic-bar"><div class="traffic-fill ${fills[Math.min(i,2)]}" style="width:${r.congestion}%"></div></div>
+    </div>
+  `).join('');
+
+  // Update ETA chip with best route
+  if(routes.length){
+    document.getElementById('etaMain').innerHTML = routes[0].eta + '<span style="font-size:14px;font-weight:400">min</span>';
+    document.getElementById('etaSub').textContent = 'via ' + routes[0].name;
+  }
+}
+
+function renderFallbackRoutes(){
+  renderRoutes([
+    { name:'Constant Spring Rd', eta:18, distance:'7.2', congestion:12 },
+    { name:'Half Way Tree',      eta:31, distance:'5.8', congestion:54 },
+    { name:'Washington Blvd',    eta:47, distance:'6.4', congestion:81 },
+  ]);
+}
+
+function renderIncidents(incidents){
+  const container = document.getElementById('incidents');
+  if(!incidents.length){
+    container.innerHTML = '<div class="incident-item"><div class="inc-icon" style="background:rgba(34,217,122,0.15);color:var(--green)">✓</div><div class="inc-text"><strong>All clear</strong><br>No incidents reported on your routes.</div></div>';
+    return;
+  }
+  const iconMap = { 1:'🚧', 2:'⚠', 3:'⚠', 6:'🚗', 14:'🌧' };
+  const colorMap= { 0:'var(--blue)', 1:'var(--amber)', 2:'var(--amber)', 3:'var(--red)', 4:'var(--red)' };
+  const bgMap   = { 0:'rgba(79,163,247,0.15)', 1:'rgba(245,166,35,0.15)', 2:'rgba(245,166,35,0.15)', 3:'rgba(240,82,82,0.15)', 4:'rgba(240,82,82,0.15)' };
+
+  container.innerHTML = incidents.slice(0,5).map(inc=>{
+    const props   = inc.properties || {};
+    const delay   = props.magnitudeOfDelay || 0;
+    const icon    = iconMap[props.iconCategory] || '⚠';
+    const color   = colorMap[delay] || 'var(--amber)';
+    const bg      = bgMap[delay]    || 'rgba(245,166,35,0.15)';
+    const desc    = props.events?.[0]?.description || 'Traffic incident reported';
+    const from    = props.from || '';
+    const to      = props.to   || '';
+    return `<div class="incident-item">
+      <div class="inc-icon" style="background:${bg};color:${color}">${icon}</div>
+      <div class="inc-text"><strong>${from}${to?' → '+to:''}</strong><br>${desc}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFallbackIncidents(){
+  document.getElementById('incidents').innerHTML = `
+    <div class="incident-item">
+      <div class="inc-icon" style="background:rgba(240,82,82,0.15);color:var(--red)">⚠</div>
+      <div class="inc-text"><strong>Accident — Half Way Tree Rd</strong><br>2-lane block near Liguanea. Expect 20+ min delay.</div>
+    </div>
+    <div class="incident-item">
+      <div class="inc-icon" style="background:rgba(245,166,35,0.15);color:var(--amber)">🚧</div>
+      <div class="inc-text"><strong>Roadwork — Washington Blvd</strong><br>Lane closure until 9:00 AM. Slow-moving.</div>
+    </div>
+    <div class="incident-item">
+      <div class="inc-icon" style="background:rgba(79,163,247,0.15);color:var(--blue)">ℹ</div>
+      <div class="inc-text"><strong>Constant Spring Rd — Clear</strong><br>No incidents. Recommended route.</div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN DATA LOADER
+═══════════════════════════════════════════════ */
+async function loadAllData(){
+  setStatus('loading','Fetching live traffic…');
+  let anyLive = false;
+
+  // Routes
+  try {
+    const routes = await fetchRoutes();
+    renderRoutes(routes);
+    anyLive = true;
+  } catch(e) {
+    console.warn('Routes fallback:', e.message);
+    renderFallbackRoutes();
+  }
+
+  // Incidents
+  try {
+    const incidents = await fetchIncidents();
+    renderIncidents(incidents);
+    anyLive = true;
+  } catch(e) {
+    console.warn('Incidents fallback:', e.message);
+    renderFallbackIncidents();
+  }
+
+  // Flow (for heatmap intensity — optional)
+  try {
+    await fetchFlow();
+    // Could update liveHotspots here based on flow data
+  } catch(e) {
+    console.warn('Flow fallback:', e.message);
+  }
+
+  const now = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(anyLive){
+    setStatus('live', `Live data · updated ${now}`);
+    document.getElementById('liveLabel').textContent = `Live traffic · updated ${now}`;
+  } else {
+    setStatus('demo','Demo mode · add API keys to go live');
+    document.getElementById('liveLabel').textContent = 'Demo mode · no API keys yet';
+  }
+}
+
+function setStatus(type, text){
+  const banner = document.getElementById('statusBanner');
+  banner.className = `status-banner ${type}`;
+  const icons = { loading:'<span class="spin">◌</span>', live:'●', demo:'◈' };
+  document.getElementById('statusText').innerHTML = (icons[type]||'') + ' ' + text;
+}
+
+/* ═══════════════════════════════════════════════
+   DEPARTURE CHART
+═══════════════════════════════════════════════ */
+function buildChart(){
+  const now  = new Date();
+  const nowH = now.getHours() + now.getMinutes()/60;
+  const congestion = [15,12,10,14,25,42,68,82,79,72,60,50,45,48,55,62,58,45,35,28,20,15,12,10];
+  const baseH = 5.5;
+  const slots = [];
+  for(let i=0;i<16;i++){
+    const h=baseH+i*0.25;
+    slots.push({h, c:congestion[Math.floor(h*2)%congestion.length]});
+  }
+  const minC    = Math.min(...slots.map(s=>s.c));
+  const bestIdx = slots.findIndex(s=>s.c===minC);
+  const container = document.getElementById('chartBars');
+  container.innerHTML = '';
+  slots.forEach((s,i)=>{
+    const pct   = s.c/90;
+    const color = s.c<30?'#22d97a':s.c<60?'#f5a623':'#f05252';
+    const isBest= i===bestIdx;
+    const col   = document.createElement('div');
+    col.className='bar-col';
+    col.innerHTML=`<div class="bar${isBest?' best-bar':''}" style="height:${Math.max(pct*60,4)}px;background:${color};opacity:${isBest?1:0.6};flex:1;position:relative">${isBest?'<span class="best-tag">best</span>':''}</div><div class="bar-label">${i%3===0?formatTime(s.h):''}</div>`;
+    container.appendChild(col);
+  });
+  const frac = (nowH-baseH)/(16*0.25);
+  const marker = document.getElementById('nowMarker');
+  if(frac>=0&&frac<=1) marker.style.left=(frac*100).toFixed(1)+'%';
+  document.getElementById('bestWindow').textContent = formatTime(slots[bestIdx].h)+' — '+formatTime(slots[bestIdx].h+0.5);
+}
+
+function formatTime(h){
+  const hh=Math.floor(h)%12||12, mm=h%1===0?'00':'30', ap=Math.floor(h)<12?'AM':'PM';
+  return `${hh}:${mm} ${ap}`;
+}
+
+/* ═══════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════ */
+function selectRoute(i, eta, name){
+  selectedRoute = i;
+  document.querySelectorAll('.route-card').forEach((c,j)=>c.classList.toggle('selected',i===j));
+  if(eta && name){
+    document.getElementById('etaMain').innerHTML=eta+'<span style="font-size:14px;font-weight:400">min</span>';
+    document.getElementById('etaSub').textContent='via '+name;
+  }
+}
+function toggleLayer(btn,layer){
+  if(layer==='heat'){showHeat=!showHeat;btn.classList.toggle('active',showHeat);}
+  else btn.classList.toggle('active');
+}
+function setLoc(i){
+  document.querySelectorAll('.loc-pill').forEach((p,j)=>p.classList.toggle('active',j===i));
+}
+function addLoc(){
+  const name=prompt('Enter place name (e.g. Gym — Liguanea):');
+  if(!name)return;
+  const container=document.querySelector('.saved-locations');
+  const addBtn=container.querySelector('.loc-pill:last-child');
+  const pill=document.createElement('div');
+  pill.className='loc-pill';
+  pill.textContent='📍 '+name;
+  container.insertBefore(pill,addBtn);
+}
+function updateClock(){
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+resize();
+window.addEventListener('resize', resize);
+buildChart();
+drawMap();
+updateClock();
+setInterval(updateClock, 1000);
+loadAllData();
+setInterval(loadAllData, CONFIG.refreshMs);
+</script>
+</body>
+</html>

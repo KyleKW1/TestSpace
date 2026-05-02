@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ClearPath — API Diagnostics</title>
+<style>
+  body { background:#0a0d14; color:#e8edf8; font-family:monospace; padding:24px; }
+  h1   { color:#22d97a; margin-bottom:4px; font-size:18px; }
+  p    { color:#7a87a8; font-size:13px; margin-bottom:24px; }
+  .test { background:#111520; border:1px solid #1e2840; border-radius:8px; padding:16px; margin-bottom:16px; }
+  .test h3 { margin:0 0 8px; font-size:14px; color:#4fa3f7; }
+  button { background:#161c2e; border:1px solid #1e2840; color:#e8edf8; padding:8px 16px; border-radius:6px; cursor:pointer; font-family:monospace; font-size:12px; margin-right:8px; }
+  button:hover { border-color:#22d97a; color:#22d97a; }
+  pre { background:#0a0d14; border:1px solid #1e2840; border-radius:6px; padding:12px; font-size:11px; overflow-x:auto; white-space:pre-wrap; margin-top:10px; min-height:40px; color:#7a87a8; }
+  .ok  { color:#22d97a; }
+  .err { color:#f05252; }
+  .loading { color:#f5a623; }
+  a { color:#4fa3f7; }
+</style>
+</head>
+<body>
+<h1>ClearPath — API Diagnostics</h1>
+<p>Use this page to confirm your Netlify functions and API keys are working. <a href="/">← Back to app</a></p>
+
+<div class="test">
+  <h3>1. TomTom — Traffic Flow</h3>
+  <button onclick="run('tomtom-flow', '/api/tomtom-traffic?type=flow')">Test</button>
+  <pre id="tomtom-flow">Click Test to run…</pre>
+</div>
+
+<div class="test">
+  <h3>2. TomTom — Incidents</h3>
+  <button onclick="run('tomtom-inc', '/api/tomtom-traffic?type=incidents')">Test</button>
+  <pre id="tomtom-inc">Click Test to run…</pre>
+</div>
+
+<div class="test">
+  <h3>3. TomTom — Route (Home → Work)</h3>
+  <button onclick="run('tomtom-route', '/api/tomtom-traffic?type=route')">Test</button>
+  <pre id="tomtom-route">Click Test to run…</pre>
+</div>
+
+<div class="test">
+  <h3>4. Google Maps — Directions (Home → Work)</h3>
+  <button onclick="run('google-dir', '/api/google-maps?type=directions')">Test</button>
+  <pre id="google-dir">Click Test to run…</pre>
+</div>
+
+<div class="test">
+  <h3>5. Google Maps — Distance Matrix</h3>
+  <button onclick="run('google-dm', '/api/google-maps?type=distancematrix')">Test</button>
+  <pre id="google-dm">Click Test to run…</pre>
+</div>
+
+<script>
+async function run(id, url) {
+  const el = document.getElementById(id);
+  el.className = 'loading';
+  el.textContent = 'Fetching ' + url + ' …';
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    el.className = res.ok && !data.error ? 'ok' : 'err';
+    el.textContent = JSON.stringify(data, null, 2);
+  } catch(e) {
+    el.className = 'err';
+    el.textContent = 'Network error: ' + e.message;
+  }
+}
+</script>
+</body>
+</html>
