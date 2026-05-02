@@ -330,7 +330,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <button class="refresh-btn" onclick="rerun()">↺ Refresh</button>
       <div class="key-notice" id="keyNotice">
         ⚠ Add your Google Maps API key to index.html<br>
-        Find <code>AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA</code> and replace the placeholder<br>
+        Find <code>GOOGLE_MAPS_KEY</code> and replace the placeholder<br>
         <a href="https://console.cloud.google.com" target="_blank">Get a key at Google Cloud →</a>
       </div>
     </div>
@@ -338,7 +338,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 </div>
 
 <script>
-const AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA = "AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA";
+const GOOGLE_MAPS_KEY = "AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA";
 
 const DEFAULTS = {
   homeLat: 17.9970, homeLng: -76.7936,
@@ -854,8 +854,8 @@ setInterval(()=>{ if(!navMode&&cOrigin&&cDest) runDir(); }, REFRESH_MS);
 
 <script>
 (function(){
-  const k=AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA;
-  if(!k||k==='AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA'){
+  const k=GOOGLE_MAPS_KEY;
+  if(!k||k==='YOUR_KEY_HERE'){
     document.getElementById('keyNotice').classList.add('show');
     document.getElementById('statusBanner').className='status-banner demo';
     document.getElementById('statusText').textContent='Demo mode — add your Google Maps API key';
