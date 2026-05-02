@@ -391,7 +391,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
       <!-- Key notice -->
       <div class="key-notice" id="keyNotice">
         ⚠ Add your Google Maps API key to enable live maps.<br>
-        Open <code>index.html</code> and replace <code>YOUR_KEY_HERE</code>.<br>
+        Open <code>index.html</code> and replace <code>AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA</code>.<br>
         <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">Get a key →</a>
       </div>
     </div>
@@ -399,12 +399,12 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 </div>
 
 <!-- ═══════════════════════════════════════════════════
-  !! REPLACE "YOUR_KEY_HERE" WITH YOUR GOOGLE MAPS API KEY
+  !! REPLACE "AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA" WITH YOUR GOOGLE MAPS API KEY
   Get one at: https://console.cloud.google.com
   Enable: Maps JavaScript API, Directions API, Places API
 ═══════════════════════════════════════════════════ -->
 <script>
-const GOOGLE_MAPS_KEY = "YOUR_KEY_HERE";
+const GOOGLE_MAPS_KEY = "AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA";
 
 /* ── CONFIG ────────────────────────────────────────── */
 const DEFAULTS = {
@@ -965,11 +965,11 @@ function darkMapStyle() {
 setInterval(() => { if (!navMode) searchRoutes(); }, REFRESH_MS);
 </script>
 
-<!-- Load Google Maps JS API — replace YOUR_KEY_HERE -->
+<!-- Load Google Maps JS API — replace AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA -->
 <script>
 (function() {
   const key = GOOGLE_MAPS_KEY;
-  if (!key || key === 'YOUR_KEY_HERE') {
+  if (!key || key === 'AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA') {
     console.warn('ClearPath: No Google Maps API key set. Using fallback demo mode.');
     document.getElementById('keyNotice').classList.add('show');
     document.getElementById('statusText').innerHTML = '◈ Demo mode — add API key to index.html';
