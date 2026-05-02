@@ -14,11 +14,34 @@
   --text:#dce5f7; --muted:#6b7a9b; --dim:#2e3a5a;
   --nav-h:60px;
 }
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;}
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+}
 
-.app{display:flex;flex-direction:column;height:100vh;}
-.main{display:flex;flex:1;overflow:hidden;min-height:0;}
-@media(max-width:768px){.main{flex-direction:column;}.sidebar{order:2;max-height:45vh;flex-shrink:0;}.map-wrap{order:1;}}
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  height: 0; /* FIXED: forces flex children to fill correctly */
+}
+
+@media(max-width:768px) {
+  .main { flex-direction: column; }
+  .sidebar { order: 2; max-height: 45vh; flex-shrink: 0; }
+  .map-wrap { order: 1; }
+}
 
 /* TOP NAV */
 .topnav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 14px;position:relative;z-index:200;height:var(--nav-h);flex-shrink:0;}
@@ -40,20 +63,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #clock{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;}
 
 /* AUTOCOMPLETE DROPDOWN */
-.ac-dropdown{
-  position:absolute;top:calc(100% + 6px);left:0;right:0;
-  background:var(--card);border:1.5px solid var(--border2);
-  border-radius:10px;z-index:9999;overflow:hidden;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);
-  display:none;
-}
+.ac-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1.5px solid var(--border2);border-radius:10px;z-index:9999;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.5);display:none;}
 .ac-dropdown.open{display:block;}
-.ac-item{
-  display:flex;align-items:flex-start;gap:10px;
-  padding:10px 12px;cursor:pointer;
-  border-bottom:1px solid var(--border);
-  transition:background 0.15s;
-}
+.ac-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;}
 .ac-item:last-child{border-bottom:none;}
 .ac-item:hover,.ac-item.focused{background:rgba(61,158,245,0.1);}
 .ac-pin{font-size:14px;flex-shrink:0;margin-top:1px;}
@@ -159,9 +171,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .inc-body{font-size:12px;line-height:1.5;color:var(--muted);}
 .inc-body strong{color:var(--text);}
 
-/* MAP — FIX: ensure full height */
-.map-wrap{position:relative;overflow:hidden;background:#0c1220;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
-#googleMap{width:100%;flex:1;min-height:300px;}
+/* MAP — FIXED HEIGHT CHAIN */
+.map-wrap {
+  position: relative;
+  overflow: hidden;
+  background: #0c1220;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%; /* FIXED */
+  display: flex;
+  flex-direction: column;
+}
+
+#googleMap {
+  width: 100%;
+  flex: 1;
+  min-height: 0; /* FIXED: was 300px which breaks flex */
+  height: 100%;  /* FIXED */
+}
+
 .map-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:10;}
 .mc-btn{background:rgba(9,12,19,0.88);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;color:var(--muted);cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;white-space:nowrap;}
 .mc-btn:hover{border-color:var(--muted);color:var(--text);}
@@ -363,7 +392,7 @@ const tick = () => {
 setInterval(tick, 1000); tick();
 
 /* ─────────────────────────────────────────
-   MAP INIT
+   MAP INIT — FIXED
 ───────────────────────────────────────── */
 function initMap() {
   const mapEl = document.getElementById('googleMap');
@@ -395,20 +424,27 @@ function initMap() {
   buildChart();
   renderIncidents();
 
-  /* Trigger resize once the element has real pixel dimensions */
+  /* Multiple resize triggers to handle flex layout settling */
+  function triggerResize() {
+    google.maps.event.trigger(gmap, 'resize');
+    gmap.setCenter(KINGSTON_CENTER);
+  }
+
+  // Use ResizeObserver to fire once element has real dimensions
   const ro = new ResizeObserver((entries) => {
     for (const entry of entries) {
       if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-        google.maps.event.trigger(gmap, 'resize');
-        gmap.setCenter(KINGSTON_CENTER);
+        triggerResize();
         ro.disconnect();
       }
     }
   });
   ro.observe(mapEl);
 
-  setTimeout(() => { google.maps.event.trigger(gmap, 'resize'); gmap.setCenter(KINGSTON_CENTER); }, 300);
-  setTimeout(() => { google.maps.event.trigger(gmap, 'resize'); gmap.setCenter(KINGSTON_CENTER); }, 1200);
+  // Belt-and-suspenders fallback timers
+  setTimeout(triggerResize, 100);
+  setTimeout(triggerResize, 500);
+  setTimeout(triggerResize, 1500);
 }
 
 /* ─────────────────────────────────────────
@@ -1015,9 +1051,6 @@ function darkStyle() {
 setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
 </script>
 
-<!-- ═══════════════════════════════════════
-     GOOGLE MAPS LOADER — FIXED (no duplicate lines)
-════════════════════════════════════════ -->
 <script>
 (function () {
   var k = GOOGLE_MAPS_KEY;
@@ -1028,7 +1061,6 @@ setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
     return;
   }
 
-  /* Wrap initMap so it fires after browser layout paint */
   window._initMapReal = window.initMap;
   window.initMap = function () {
     requestAnimationFrame(function () {
@@ -1039,15 +1071,16 @@ setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
   };
 
   var s = document.createElement('script');
-  s.src   = 'https://maps.googleapis.com/maps/api/js?key=' + k + '&libraries=places,geometry&callback=initMap';
+  s.src   = 'https://maps.googleapis.com/maps/api/js?key=' + k + '&libraries=places,geometry&callback=initMap&loading=async';
   s.async = true;
   s.defer = true;
   s.onerror = function () {
     document.getElementById('statusBanner').className = 'status-banner err';
     document.getElementById('statusText').textContent = '✕ Failed to load Google Maps — check API key & billing';
   };
-  document.head.appendChild(s); /* ← only appears ONCE — this was the fatal bug */
+  document.head.appendChild(s);
 })();
 </script>
 </body>
+</html>
 </html>
