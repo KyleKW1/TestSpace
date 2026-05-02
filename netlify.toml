@@ -13,4 +13,4 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com; connect-src 'self' https://*.googleapis.com; frame-src 'none';"
+    Content-Security-Policy = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
