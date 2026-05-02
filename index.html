@@ -2,571 +2,987 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClearPath — Traffic Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ClearPath — Navigation</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0a0d14; --surface: #111520; --card: #161c2e; --border: #1e2840;
-    --green: #22d97a; --amber: #f5a623; --red: #f05252; --blue: #4fa3f7;
-    --text: #e8edf8; --muted: #7a87a8;
-  }
-  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; height: 100vh; overflow: hidden; }
-  .app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #090c13; --surface: #0f1520; --card: #141b2e;
+  --border: #1c2540; --border2: #232e4a;
+  --green: #1fdf72; --amber: #f5a41f; --red: #ef4343;
+  --blue: #3d9ef5; --purple: #9b6dff;
+  --text: #dce5f7; --muted: #6b7a9b; --dim: #3a4566;
+  --nav-h: 60px;
+}
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; }
 
-  /* TOP BAR */
-  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-  .logo span { color: var(--green); }
-  .saved-locations { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
-  .loc-pill { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-family: 'DM Mono', monospace; cursor: pointer; color: var(--muted); transition: all 0.2s; white-space: nowrap; }
-  .loc-pill.active { border-color: var(--blue); color: var(--blue); background: rgba(79,163,247,0.08); }
-  .loc-pill:hover:not(.active) { border-color: var(--muted); color: var(--text); }
-  #clock { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+/* ─── LAYOUT ─────────────────────────────── */
+.app { display: grid; grid-template-rows: var(--nav-h) 1fr; height: 100vh; }
+.main { display: grid; grid-template-columns: 360px 1fr; overflow: hidden; position: relative; }
+@media (max-width: 768px) {
+  .main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .sidebar { order: 2; max-height: 50vh; }
+  .map-wrap { order: 1; }
+}
 
-  /* MAIN */
-  .main { display: grid; grid-template-columns: 340px 1fr; overflow: hidden; }
-  @media (max-width: 700px) { .main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }
+/* ─── TOP NAV ────────────────────────────── */
+.topnav {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  position: relative; z-index: 100;
+}
+.logo { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; flex-shrink: 0; }
+.logo em { color: var(--green); font-style: normal; }
+.origin-dest { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.od-field {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 10px; font-size: 12px; font-family: 'DM Mono', monospace;
+  color: var(--text); flex: 1; min-width: 0; outline: none;
+  transition: border-color 0.2s;
+}
+.od-field:focus { border-color: var(--blue); }
+.od-swap { background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); cursor: pointer; padding: 5px 7px; font-size: 14px;
+  transition: all 0.2s; flex-shrink: 0; }
+.od-swap:hover { border-color: var(--green); color: var(--green); }
+.search-btn {
+  background: var(--green); color: #050810; border: none; border-radius: 8px;
+  padding: 7px 14px; font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif;
+  cursor: pointer; flex-shrink: 0; transition: opacity 0.2s; letter-spacing: 0.3px;
+}
+.search-btn:hover { opacity: 0.85; }
+#clock { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; flex-shrink: 0; }
 
-  /* SIDEBAR */
-  .sidebar { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-  .section-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+/* ─── SIDEBAR ────────────────────────────── */
+.sidebar {
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tab-btn {
+  flex: 1; padding: 10px 0; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); background: none; border: none;
+  border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;
+  font-family: 'Syne', sans-serif;
+}
+.tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+.tab-pane { display: none; flex: 1; overflow-y: auto; padding: 14px; }
+.tab-pane.active { display: flex; flex-direction: column; gap: 14px; }
+.section-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 2.5px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 8px;
+}
 
-  /* ROUTE CARDS */
-  .route-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s; margin-bottom: 8px; }
-  .route-card:last-child { margin-bottom: 0; }
-  .route-card:hover { border-color: var(--muted); }
-  .route-card.selected { border-color: var(--blue); background: rgba(79,163,247,0.06); }
-  .route-card.best { border-color: var(--green); }
-  .route-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-  .route-name { font-size: 14px; font-weight: 600; }
-  .route-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; font-family: 'DM Mono', monospace; }
-  .badge-green { background: rgba(34,217,122,0.15); color: var(--green); }
-  .badge-amber { background: rgba(245,166,35,0.15); color: var(--amber); }
-  .badge-red   { background: rgba(240,82,82,0.15);  color: var(--red); }
-  .route-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .meta-item  { text-align: center; }
-  .meta-val   { font-size: 18px; font-weight: 700; font-family: 'DM Mono', monospace; }
-  .meta-key   { font-size: 10px; color: var(--muted); margin-top: 2px; }
-  .traffic-bar { height: 4px; border-radius: 2px; margin-top: 10px; background: var(--border); overflow: hidden; }
-  .traffic-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
-  .fill-green { background: linear-gradient(90deg,#1aac62,var(--green)); }
-  .fill-amber { background: linear-gradient(90deg,#c4851c,var(--amber)); }
-  .fill-red   { background: linear-gradient(90deg,#c43d3d,var(--red)); }
+/* ─── STATUS BANNER ─────────────────────── */
+.status-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 7px; font-size: 11px;
+  font-family: 'DM Mono', monospace;
+}
+.status-banner.loading { background: rgba(61,158,245,0.08); color: var(--blue); border: 1px solid rgba(61,158,245,0.18); }
+.status-banner.live { background: rgba(31,223,114,0.08); color: var(--green); border: 1px solid rgba(31,223,114,0.18); }
+.status-banner.demo { background: rgba(245,164,31,0.08); color: var(--amber); border: 1px solid rgba(245,164,31,0.18); }
+.spin { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  /* DEPARTURE CHART */
-  .depart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-  .chart-wrap  { position: relative; height: 90px; margin-top: 12px; }
-  .chart-bars  { display: flex; align-items: flex-end; gap: 3px; height: 70px; }
-  .bar-col     { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
-  .bar         { border-radius: 3px 3px 0 0; width: 100%; transition: all 0.3s; position: relative; }
-  .bar-label   { font-size: 9px; font-family: 'DM Mono', monospace; color: var(--muted); text-align: center; margin-top: 2px; }
-  .bar.best-bar { outline: 1px solid var(--green); outline-offset: 1px; }
-  .best-tag    { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 8px; color: var(--green); white-space: nowrap; font-weight: 700; }
-  .now-marker  { position: absolute; bottom: 0; width: 2px; background: var(--blue); top: 0; transition: left 0.3s; }
-  .now-label   { position: absolute; top: -14px; font-size: 9px; color: var(--blue); transform: translateX(-50%); font-family: 'DM Mono', monospace; white-space: nowrap; }
+/* ─── ROUTE CARDS ───────────────────────── */
+.route-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 13px; cursor: pointer; transition: all 0.18s; position: relative;
+  overflow: hidden;
+}
+.route-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: 3px 0 0 3px; transition: opacity 0.2s;
+}
+.route-card.r0::before { background: var(--green); }
+.route-card.r1::before { background: var(--amber); }
+.route-card.r2::before { background: var(--red); }
+.route-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.route-card.selected { border-color: var(--blue); background: rgba(61,158,245,0.05); }
+.route-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 9px; }
+.route-name { font-size: 13px; font-weight: 700; }
+.route-badge {
+  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+  font-family: 'DM Mono', monospace; letter-spacing: 0.5px;
+}
+.badge-g { background: rgba(31,223,114,0.12); color: var(--green); }
+.badge-a { background: rgba(245,164,31,0.12); color: var(--amber); }
+.badge-r { background: rgba(239,67,67,0.12); color: var(--red); }
+.route-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.stat { text-align: center; }
+.stat-val { font-size: 17px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; }
+.stat-key { font-size: 9px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.traffic-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+.traffic-fill { height: 100%; border-radius: 2px; }
+.go-btn {
+  display: block; width: 100%; margin-top: 10px; padding: 7px;
+  border-radius: 7px; border: none; font-size: 11px; font-weight: 700;
+  font-family: 'Syne', sans-serif; letter-spacing: 0.5px; cursor: pointer;
+  transition: all 0.2s; display: none;
+}
+.route-card.selected .go-btn { display: block; background: var(--green); color: #050810; }
+.route-card.selected .go-btn:hover { opacity: 0.85; }
 
-  /* INCIDENTS */
-  .incident-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-  .incident-item:last-child { border: none; }
-  .inc-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; margin-top: 1px; }
-  .inc-text { font-size: 12px; line-height: 1.5; color: var(--muted); }
-  .inc-text strong { color: var(--text); font-weight: 600; }
+/* ─── STEPS PANE ───────────────────────── */
+#stepsPane { display: none; flex-direction: column; gap: 14px; }
+#stepsPane.active { display: flex; }
+.nav-header {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 13px; text-align: center;
+}
+.nav-eta-big { font-size: 32px; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--green); line-height: 1; }
+.nav-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.stop-nav-btn {
+  margin-top: 8px; width: 100%; padding: 7px; border-radius: 7px;
+  border: 1px solid var(--red); color: var(--red); background: rgba(239,67,67,0.08);
+  font-size: 11px; font-weight: 700; font-family: 'Syne', sans-serif;
+  cursor: pointer; transition: all 0.2s;
+}
+.stop-nav-btn:hover { background: rgba(239,67,67,0.15); }
+.step-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.step-item:last-child { border: none; }
+.step-icon {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--card);
+  border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: center; font-size: 12px; flex-shrink: 0; margin-top: 1px;
+}
+.step-item.current .step-icon { background: rgba(31,223,114,0.15); border-color: var(--green); }
+.step-text { font-size: 12px; line-height: 1.5; color: var(--muted); flex: 1; }
+.step-text strong { color: var(--text); font-weight: 600; }
+.step-dist { font-size: 10px; color: var(--dim); font-family: 'DM Mono', monospace; margin-top: 2px; }
 
-  /* STATUS BANNER */
-  .status-banner { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-family: 'DM Mono', monospace; margin-bottom: 4px; }
-  .status-banner.loading { background: rgba(79,163,247,0.1); color: var(--blue); border: 1px solid rgba(79,163,247,0.2); }
-  .status-banner.live    { background: rgba(34,217,122,0.1); color: var(--green); border: 1px solid rgba(34,217,122,0.2); }
-  .status-banner.demo    { background: rgba(245,166,35,0.1); color: var(--amber); border: 1px solid rgba(245,166,35,0.2); }
-  .spin { display: inline-block; animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ─── DEPARTURE CHART ──────────────────── */
+.depart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 13px; }
+.chart-wrap { position: relative; height: 90px; margin-top: 10px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 70px; }
+.bar-col { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; }
+.bar-inner { border-radius: 3px 3px 0 0; width: 100%; position: relative; transition: height 0.6s ease; }
+.bar-inner.best { outline: 1.5px solid var(--green); outline-offset: 1px; }
+.best-tag { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 8px; color: var(--green); white-space: nowrap; font-weight: 700; }
+.bar-lbl { font-size: 8px; color: var(--dim); font-family: 'DM Mono', monospace; }
+.now-line { position: absolute; top: 0; bottom: 20px; width: 1.5px; background: var(--blue); pointer-events: none; }
+.now-lbl { position: absolute; top: -14px; font-size: 8px; color: var(--blue); transform: translateX(-50%); font-family: 'DM Mono', monospace; }
+.depart-best { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.depart-best strong { color: var(--green); }
 
-  /* MAP */
-  .map-area { position: relative; overflow: hidden; background: #0c1220; }
-  canvas#mapCanvas { display: block; width: 100%; height: 100%; }
-  .map-overlay { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .map-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; font-family: 'Syne', sans-serif; color: var(--text); cursor: pointer; transition: all 0.2s; font-weight: 600; }
-  .map-btn:hover  { border-color: var(--blue); color: var(--blue); }
-  .map-btn.active { border-color: var(--green); color: var(--green); background: rgba(34,217,122,0.08); }
-  .live-chip { position: absolute; bottom: 12px; left: 12px; background: rgba(10,13,20,0.85); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-family: 'DM Mono', monospace; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(4px); }
-  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(1.3); } }
-  .eta-chip { position: absolute; top: 12px; left: 12px; background: rgba(10,13,20,0.9); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; backdrop-filter: blur(4px); }
-  .eta-main { font-size: 26px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--green); line-height: 1; }
-  .eta-sub  { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  #refreshBtn { position: absolute; bottom: 12px; right: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); cursor: pointer; transition: all 0.2s; }
-  #refreshBtn:hover { border-color: var(--green); color: var(--green); }
+/* ─── INCIDENTS ──────────────────────────── */
+.inc-item { display: flex; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.inc-item:last-child { border: none; }
+.inc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.inc-body { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.inc-body strong { color: var(--text); }
+
+/* ─── MAP WRAP ──────────────────────────── */
+.map-wrap { position: relative; overflow: hidden; background: #0c1220; }
+#googleMap { width: 100%; height: 100%; }
+
+/* ─── MAP OVERLAYS ──────────────────────── */
+.map-controls {
+  position: absolute; top: 12px; right: 12px;
+  display: flex; flex-direction: column; gap: 6px; z-index: 10;
+}
+.map-ctrl-btn {
+  background: rgba(9,12,19,0.88); border: 1px solid var(--border);
+  backdrop-filter: blur(8px); border-radius: 8px; padding: 7px 12px;
+  font-size: 11px; font-weight: 700; font-family: 'Syne', sans-serif;
+  color: var(--muted); cursor: pointer; transition: all 0.2s;
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.map-ctrl-btn:hover { border-color: var(--muted); color: var(--text); }
+.map-ctrl-btn.active { border-color: var(--green); color: var(--green); background: rgba(31,223,114,0.07); }
+
+/* ETA chip */
+.eta-chip {
+  position: absolute; top: 12px; left: 12px; z-index: 10;
+  background: rgba(9,12,19,0.92); border: 1px solid var(--border);
+  backdrop-filter: blur(8px); border-radius: 10px; padding: 10px 14px;
+  min-width: 130px;
+}
+.eta-val { font-size: 28px; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--green); line-height: 1; }
+.eta-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* Nav instruction chip (shown during navigation) */
+.nav-instruction {
+  position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+  background: rgba(9,12,19,0.96); border: 1px solid var(--green);
+  backdrop-filter: blur(12px); border-radius: 12px; padding: 12px 18px;
+  z-index: 10; display: none; max-width: 340px; text-align: center;
+  box-shadow: 0 0 24px rgba(31,223,114,0.15);
+}
+.nav-instruction.visible { display: block; }
+.nav-turn-icon { font-size: 22px; margin-bottom: 4px; }
+.nav-turn-text { font-size: 13px; font-weight: 700; color: var(--text); }
+.nav-turn-dist { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 3px; }
+
+/* Live chip */
+.live-chip {
+  position: absolute; bottom: 14px; left: 12px; z-index: 10;
+  background: rgba(9,12,19,0.88); border: 1px solid var(--border);
+  backdrop-filter: blur(6px); border-radius: 20px; padding: 5px 12px;
+  font-size: 10px; font-family: 'DM Mono', monospace; display: flex;
+  align-items: center; gap: 6px; color: var(--muted);
+}
+.pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.4)} }
+.my-loc-btn {
+  position: absolute; bottom: 14px; right: 12px; z-index: 10;
+  background: rgba(9,12,19,0.88); border: 1px solid var(--border);
+  backdrop-filter: blur(6px); border-radius: 8px; padding: 6px 12px;
+  font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted);
+  cursor: pointer; transition: all 0.2s;
+}
+.my-loc-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ─── PLACE AUTOCOMPLETE DROPDOWN ──────── */
+.ac-wrap { position: relative; flex: 1; min-width: 0; }
+.ac-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); cursor: pointer; font-size: 14px; background: none; border: none;
+  display: none; padding: 0 2px;
+}
+.ac-wrap:focus-within .ac-clear { display: block; }
+
+/* ─── KEY NOTICE ───────────────────────── */
+.key-notice {
+  position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+  background: rgba(245,164,31,0.1); border: 1px solid rgba(245,164,31,0.3);
+  border-radius: 10px; padding: 12px 18px; z-index: 10;
+  text-align: center; font-size: 12px; color: var(--amber); max-width: 320px;
+  font-family: 'DM Mono', monospace; display: none;
+}
+.key-notice.show { display: block; }
+.key-notice a { color: var(--blue); }
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- TOP BAR -->
-  <div class="topbar">
-    <div class="logo">clear<span>path</span></div>
-    <div class="saved-locations">
-      <div class="loc-pill active" id="pill0" onclick="setLoc(0)">🏠 Home — Kingston</div>
-      <div class="loc-pill" id="pill1" onclick="setLoc(1)">🏢 Work — New Kingston</div>
-      <div class="loc-pill" onclick="addLoc()">＋ Add place</div>
+  <!-- ═══ TOP NAV ═══ -->
+  <div class="topnav">
+    <div class="logo">clear<em>path</em></div>
+    <div class="origin-dest">
+      <div class="ac-wrap">
+        <input class="od-field" id="originInput" placeholder="📍 From: Home — Kingston" autocomplete="off">
+      </div>
+      <button class="od-swap" onclick="swapLocations()" title="Swap">⇅</button>
+      <div class="ac-wrap">
+        <input class="od-field" id="destInput" placeholder="🏢 To: Work — New Kingston" autocomplete="off">
+      </div>
+      <button class="search-btn" onclick="searchRoutes()">GO</button>
     </div>
     <div id="clock"></div>
   </div>
 
-  <!-- MAIN -->
+  <!-- ═══ MAIN ═══ -->
   <div class="main">
+
+    <!-- ─── SIDEBAR ─── -->
     <div class="sidebar">
-
-      <!-- Status banner -->
-      <div class="status-banner loading" id="statusBanner">
-        <span class="spin">◌</span> <span id="statusText">Fetching live traffic…</span>
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" onclick="showTab('routes',this)">Routes</button>
+        <button class="tab-btn" onclick="showTab('navigate',this)">Navigate</button>
+        <button class="tab-btn" onclick="showTab('depart',this)">Timing</button>
+        <button class="tab-btn" onclick="showTab('alerts',this)">Alerts</button>
       </div>
 
-      <!-- Routes -->
-      <div>
-        <div class="section-label">Best routes now</div>
-        <div id="routeList">
-          <!-- populated by JS -->
-          <div style="color:var(--muted);font-size:13px;padding:12px 0">Loading routes…</div>
+      <!-- ROUTES TAB -->
+      <div class="tab-pane active" id="tab-routes">
+        <div class="status-banner loading" id="statusBanner">
+          <span class="spin">◌</span>
+          <span id="statusText">Ready — enter destination above</span>
+        </div>
+        <div>
+          <div class="section-label">Available routes</div>
+          <div id="routeList">
+            <div style="color:var(--muted);font-size:12px;padding:16px 0;text-align:center;line-height:1.8">
+              Enter an origin and destination<br>above, then tap <strong style="color:var(--text)">GO</strong>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Departure Chart -->
-      <div class="depart-card">
-        <div class="section-label">Best time to leave</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Congestion forecast — next 3 hours</div>
-        <div class="chart-wrap">
-          <div class="chart-bars" id="chartBars"></div>
-          <div class="now-marker" id="nowMarker"><div class="now-label">now</div></div>
+      <!-- NAVIGATE TAB -->
+      <div class="tab-pane" id="tab-navigate">
+        <div id="noNavMsg" style="color:var(--muted);font-size:12px;padding:16px 0;text-align:center;line-height:1.8">
+          Select a route and tap<br><strong style="color:var(--green)">Start Navigation</strong> to begin<br>turn-by-turn guidance
         </div>
-        <div style="margin-top:10px;font-size:12px;color:var(--muted)">
-          Best window: <strong style="color:var(--green)" id="bestWindow">—</strong> · Save ~19 min
-        </div>
-      </div>
-
-      <!-- Incidents -->
-      <div>
-        <div class="section-label">Live incidents</div>
-        <div id="incidents">
-          <div style="color:var(--muted);font-size:12px;padding:8px 0">Loading incidents…</div>
+        <div id="stepsContainer" style="display:none;width:100%">
+          <div class="nav-header">
+            <div class="nav-eta-big" id="navEtaBig">—</div>
+            <div class="nav-sub" id="navRouteName">Select a route first</div>
+            <button class="stop-nav-btn" onclick="stopNavigation()">✕ Stop Navigation</button>
+          </div>
+          <div class="section-label" style="margin-top:4px">Turn-by-turn directions</div>
+          <div id="stepsList"></div>
         </div>
       </div>
 
+      <!-- TIMING TAB -->
+      <div class="tab-pane" id="tab-depart">
+        <div class="depart-card">
+          <div class="section-label">Leave now vs later</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Typical congestion — next 3 hours</div>
+          <div class="chart-wrap">
+            <div class="chart-bars" id="chartBars"></div>
+            <div class="now-line" id="nowLine"><div class="now-lbl">now</div></div>
+          </div>
+          <div class="depart-best" id="departBest">Best window: <strong>—</strong></div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px">
+          <div class="section-label">Kingston rush hours</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.9">
+            🔴 <strong style="color:var(--text)">7:00–9:00 AM</strong> — Morning rush, Half Way Tree worst<br>
+            🟡 <strong style="color:var(--text)">12:00–1:00 PM</strong> — Lunch moderate<br>
+            🔴 <strong style="color:var(--text)">4:30–7:00 PM</strong> — Evening rush, Washington Blvd<br>
+            🟢 <strong style="color:var(--text)">Before 6:30 AM</strong> — Clearest roads<br>
+            🟢 <strong style="color:var(--text)">After 8:00 PM</strong> — Good clear windows
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS TAB -->
+      <div class="tab-pane" id="tab-alerts">
+        <div id="incidentsList">
+          <div style="color:var(--muted);font-size:12px;padding:8px 0">Loading alerts…</div>
+        </div>
+      </div>
     </div>
 
-    <!-- MAP -->
-    <div class="map-area">
-      <canvas id="mapCanvas"></canvas>
-      <div class="eta-chip">
-        <div class="eta-main" id="etaMain">—</div>
-        <div class="eta-sub"  id="etaSub">Fetching best route…</div>
+    <!-- ─── MAP ─── -->
+    <div class="map-wrap">
+      <div id="googleMap"></div>
+
+      <!-- ETA chip -->
+      <div class="eta-chip" id="etaChip">
+        <div class="eta-val" id="etaVal">—</div>
+        <div class="eta-sub" id="etaSub">No route selected</div>
       </div>
-      <div class="map-overlay">
-        <button class="map-btn active" onclick="toggleLayer(this,'heat')">Heatmap</button>
-        <button class="map-btn" onclick="toggleLayer(this,'satellite')">Satellite</button>
-        <button class="map-btn" onclick="toggleLayer(this,'incidents')">Incidents</button>
+
+      <!-- Map controls -->
+      <div class="map-controls">
+        <button class="map-ctrl-btn active" id="btnRoad" onclick="setMapType('roadmap',this)">🗺 Map</button>
+        <button class="map-ctrl-btn" id="btnSat"  onclick="setMapType('satellite',this)">🛰 Satellite</button>
+        <button class="map-ctrl-btn" id="btnHybrid" onclick="setMapType('hybrid',this)">🌐 Hybrid</button>
+        <button class="map-ctrl-btn active" id="btnTraffic" onclick="toggleTraffic(this)">🔴 Traffic</button>
+        <button class="map-ctrl-btn" id="btnMyLoc" onclick="goToMyLocation()">📍 My Location</button>
       </div>
+
+      <!-- Navigation instruction (during nav mode) -->
+      <div class="nav-instruction" id="navInstruction">
+        <div class="nav-turn-icon" id="navTurnIcon">↑</div>
+        <div class="nav-turn-text" id="navTurnText">Head north on Constant Spring Rd</div>
+        <div class="nav-turn-dist" id="navTurnDist">in 200 m</div>
+      </div>
+
+      <!-- Live chip -->
       <div class="live-chip">
-        <div class="pulse"></div>
-        <span id="liveLabel">Connecting…</span>
+        <div class="pulse-dot"></div>
+        <span id="liveLabel">Ready</span>
       </div>
-      <button id="refreshBtn" onclick="loadAllData()">↺ Refresh</button>
+
+      <!-- My location button -->
+      <button class="my-loc-btn" onclick="goToMyLocation()">↺ Refresh</button>
+
+      <!-- Key notice -->
+      <div class="key-notice" id="keyNotice">
+        ⚠ Add your Google Maps API key to enable live maps.<br>
+        Open <code>index.html</code> and replace <code>YOUR_KEY_HERE</code>.<br>
+        <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">Get a key →</a>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+  !! REPLACE "YOUR_KEY_HERE" WITH YOUR GOOGLE MAPS API KEY
+  Get one at: https://console.cloud.google.com
+  Enable: Maps JavaScript API, Directions API, Places API
+═══════════════════════════════════════════════════ -->
 <script>
-/* ═══════════════════════════════════════════════
-   CONFIG — edit origins/destinations here
-   Coords: latitude,longitude
-═══════════════════════════════════════════════ */
-const CONFIG = {
-  home:        { lat: 17.9970, lon: -76.7936, label: "Home — Kingston"     },
-  work:        { lat: 18.0100, lon: -76.7890, label: "Work — New Kingston" },
-  bbox:        "-76.85,17.95,-76.75,18.05",
-  refreshMs:   60000,   // auto-refresh every 60 seconds
+const GOOGLE_MAPS_KEY = "YOUR_KEY_HERE";
+
+/* ── CONFIG ────────────────────────────────────────── */
+const DEFAULTS = {
+  home: { lat: 17.9970, lon: -76.7936, label: "Home — Kingston" },
+  work: { lat: 18.0100, lon: -76.7890, label: "Work — New Kingston" },
+};
+const REFRESH_MS = 90000;
+
+/* ── STATE ─────────────────────────────────────────── */
+let gmap, directionsService, directionsRenderers = [], trafficLayer;
+let selectedRouteIdx = 0, allRoutes = [], navSteps = [];
+let navMode = false, watchId = null, currentStepIdx = 0;
+let userMarker = null;
+let trafficVisible = true;
+
+/* ── CLOCK ─────────────────────────────────────────── */
+function tick() { document.getElementById('clock').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+setInterval(tick, 1000); tick();
+
+/* ── MAP INIT ──────────────────────────────────────── */
+function initMap() {
+  const center = { lat: DEFAULTS.home.lat, lng: DEFAULTS.home.lon };
+  gmap = new google.maps.Map(document.getElementById('googleMap'), {
+    center, zoom: 13,
+    mapTypeId: 'roadmap',
+    disableDefaultUI: true,
+    zoomControl: true,
+    fullscreenControl: true,
+    gestureHandling: 'greedy',
+    styles: darkMapStyle(),
+  });
+
+  directionsService = new google.maps.DirectionsService();
+  trafficLayer = new google.maps.TrafficLayer();
+  trafficLayer.setMap(gmap);
+
+  // Autocomplete
+  try {
+    const acOrig = new google.maps.places.Autocomplete(document.getElementById('originInput'), { componentRestrictions: { country: 'jm' } });
+    const acDest = new google.maps.places.Autocomplete(document.getElementById('destInput'),   { componentRestrictions: { country: 'jm' } });
+    acOrig.addListener('place_changed', () => {});
+    acDest.addListener('place_changed', () => {});
+  } catch(e) {}
+
+  // Default route on load
+  document.getElementById('originInput').value = DEFAULTS.home.label;
+  document.getElementById('destInput').value   = DEFAULTS.work.label;
+  searchRoutes();
+  buildChart();
+  renderFallbackIncidents();
+}
+
+/* ── SEARCH ROUTES ─────────────────────────────────── */
+function searchRoutes() {
+  const origin = document.getElementById('originInput').value.trim() || DEFAULTS.home.label;
+  const dest   = document.getElementById('destInput').value.trim()   || DEFAULTS.work.label;
+  if (!origin || !dest) return;
+
+  setStatus('loading', 'Calculating routes…');
+  clearRenderers();
+
+  const request = {
+    origin, destination: dest,
+    travelMode: google.maps.TravelMode.DRIVING,
+    provideRouteAlternatives: true,
+    drivingOptions: { departureTime: new Date(), trafficModel: google.maps.TrafficModel.BEST_GUESS },
+  };
+
+  directionsService.route(request, (result, status) => {
+    if (status === 'OK') {
+      allRoutes = result.routes;
+      renderAllRoutes(result.routes);
+      renderRouteSidebar(result.routes);
+      setStatus('live', `Live · ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`);
+      document.getElementById('liveLabel').textContent = 'Live traffic data';
+      document.getElementById('keyNotice').classList.remove('show');
+    } else {
+      console.warn('Directions failed:', status);
+      setStatus('demo', 'Demo mode — API key needed');
+      document.getElementById('keyNotice').classList.add('show');
+      renderFallbackSidebar();
+    }
+  });
+}
+
+/* ── RENDER ROUTES ON MAP ──────────────────────────── */
+const ROUTE_COLORS = ['#1fdf72', '#f5a41f', '#ef4343', '#9b6dff'];
+
+function clearRenderers() {
+  directionsRenderers.forEach(r => r.setMap(null));
+  directionsRenderers = [];
+}
+
+function renderAllRoutes(routes) {
+  clearRenderers();
+  routes.forEach((route, i) => {
+    const renderer = new google.maps.DirectionsRenderer({
+      map: gmap,
+      directions: { routes, request: {} },
+      routeIndex: i,
+      suppressMarkers: i > 0,
+      suppressInfoWindows: true,
+      polylineOptions: {
+        strokeColor:   ROUTE_COLORS[i % ROUTE_COLORS.length],
+        strokeOpacity: i === selectedRouteIdx ? 0.95 : 0.30,
+        strokeWeight:  i === selectedRouteIdx ? 6 : 3,
+        zIndex:        i === selectedRouteIdx ? 10 : 1,
+      },
+      markerOptions: {
+        origin: { icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#3d9ef5', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 } },
+        destination: { icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#1fdf72', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 } },
+      },
+    });
+    renderer.setDirections(result_cache);
+    directionsRenderers.push(renderer);
+  });
+}
+
+// Workaround: cache result for multi-renderer
+let result_cache = null;
+
+function renderRoutesWithCache(result) {
+  result_cache = result;
+  clearRenderers();
+  result.routes.forEach((route, i) => {
+    const renderer = new google.maps.DirectionsRenderer({
+      map: gmap,
+      routeIndex: i,
+      suppressInfoWindows: true,
+      suppressMarkers: i > 0,
+      polylineOptions: {
+        strokeColor:   ROUTE_COLORS[i % ROUTE_COLORS.length],
+        strokeOpacity: i === selectedRouteIdx ? 0.95 : 0.35,
+        strokeWeight:  i === selectedRouteIdx ? 7 : 3,
+        zIndex:        i === selectedRouteIdx ? 10 : 1,
+        clickable: true,
+      },
+      markerOptions: {
+        origin: { icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:'#3d9ef5', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 } },
+        destination: { icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:'#1fdf72', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 } },
+      },
+    });
+    renderer.setDirections(result);
+    renderer.addListener('routeindex_changed', () => selectRouteIdx(i));
+    directionsRenderers.push(renderer);
+  });
+}
+
+// Re-do search to use cache approach
+directionsServiceRun = function(origin, dest) {
+  setStatus('loading', 'Calculating routes…');
+  clearRenderers();
+  const request = {
+    origin, destination: dest,
+    travelMode: google.maps.TravelMode.DRIVING,
+    provideRouteAlternatives: true,
+    drivingOptions: { departureTime: new Date(), trafficModel: google.maps.TrafficModel.BEST_GUESS },
+  };
+  directionsService.route(request, (result, status) => {
+    if (status === 'OK') {
+      allRoutes = result.routes;
+      result_cache = result;
+      renderRoutesWithCache(result);
+      renderRouteSidebar(result.routes);
+      setStatus('live', `Live · ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`);
+      document.getElementById('liveLabel').textContent = 'Live traffic data';
+      document.getElementById('keyNotice').classList.remove('show');
+    } else {
+      setStatus('demo', 'Demo mode — enter valid locations');
+      document.getElementById('keyNotice').classList.add('show');
+      renderFallbackSidebar();
+    }
+  });
 };
 
-/* ═══════════════════════════════════════════════
-   CANVAS MAP
-═══════════════════════════════════════════════ */
-const canvas = document.getElementById('mapCanvas');
-const ctx    = canvas.getContext('2d');
-let showHeat = true, selectedRoute = 0, frame = 0;
-let liveHotspots = null;
-
-const routeDefs = [
-  { color:'#22d97a', points:[[0.15,0.75],[0.22,0.60],[0.35,0.42],[0.48,0.30],[0.60,0.22],[0.72,0.18]] },
-  { color:'#f5a623', points:[[0.15,0.75],[0.28,0.68],[0.42,0.58],[0.52,0.45],[0.62,0.30],[0.72,0.18]] },
-  { color:'#f05252', points:[[0.15,0.75],[0.20,0.80],[0.35,0.78],[0.50,0.65],[0.62,0.45],[0.72,0.18]] },
-];
-
-const fallbackHotspots = [
-  { x:0.42,y:0.58,r:0.09,intensity:0.9, color:'255,50,50'  },
-  { x:0.50,y:0.65,r:0.10,intensity:0.85,color:'255,100,30' },
-  { x:0.28,y:0.68,r:0.07,intensity:0.70,color:'255,160,30' },
-  { x:0.22,y:0.60,r:0.05,intensity:0.20,color:'50,200,100' },
-  { x:0.35,y:0.42,r:0.04,intensity:0.15,color:'50,210,100' },
-  { x:0.62,y:0.30,r:0.06,intensity:0.50,color:'255,150,30' },
-];
-
-const buildings = Array.from({length:60},()=>({
-  x:Math.random(),y:Math.random(),
-  w:0.015+Math.random()*0.025,h:0.015+Math.random()*0.03,
-  b:0.3+Math.random()*0.3
-}));
-
-function resize(){
-  canvas.width  = canvas.parentElement.offsetWidth;
-  canvas.height = canvas.parentElement.offsetHeight;
+function searchRoutes() {
+  const origin = document.getElementById('originInput').value.trim() || DEFAULTS.home.label;
+  const dest   = document.getElementById('destInput').value.trim()   || DEFAULTS.work.label;
+  directionsServiceRun(origin, dest);
 }
 
-function drawMap(){
-  const W=canvas.width,H=canvas.height;
-  ctx.fillStyle='#0c1220'; ctx.fillRect(0,0,W,H);
-
-  ctx.strokeStyle='rgba(30,40,65,0.8)'; ctx.lineWidth=1;
-  for(let x=0;x<W;x+=W*0.08){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<H;y+=H*0.08){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-
-  buildings.forEach(b=>{
-    ctx.fillStyle=`rgba(${Math.floor(b.b*60)},${Math.floor(b.b*70)},${Math.floor(b.b*100)},0.6)`;
-    ctx.fillRect(b.x*W,b.y*H,b.w*W,b.h*H);
-  });
-
-  if(showHeat){
-    const hs = liveHotspots || fallbackHotspots;
-    hs.forEach(h=>{
-      const cx=h.x*W,cy=h.y*H,r=h.r*Math.min(W,H);
-      const wave=1+0.05*Math.sin(frame*0.05);
-      const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,r*wave);
-      grd.addColorStop(0,  `rgba(${h.color},${(h.intensity*0.55).toFixed(2)})`);
-      grd.addColorStop(0.5,`rgba(${h.color},${(h.intensity*0.20).toFixed(2)})`);
-      grd.addColorStop(1,  'rgba(0,0,0,0)');
-      ctx.fillStyle=grd;
-      ctx.beginPath();ctx.arc(cx,cy,r*wave,0,Math.PI*2);ctx.fill();
-    });
-  }
-
-  routeDefs.forEach((r,i)=>{if(i!==selectedRoute)drawRoute(r,0.25,2,i);});
-  drawRoute(routeDefs[selectedRoute],1,3.5,selectedRoute);
-
-  const o=routeDefs[0].points[0], d=routeDefs[0].points[routeDefs[0].points.length-1];
-  drawPin(o[0]*W,o[1]*H,'#4fa3f7','H');
-  drawPin(d[0]*W,d[1]*H,'#22d97a','W');
-
-  frame++;
-  requestAnimationFrame(drawMap);
-}
-
-function drawRoute(r,alpha,width,idx){
-  const W=canvas.width,H=canvas.height,pts=r.points;
-  ctx.globalAlpha=alpha; ctx.strokeStyle=r.color;
-  ctx.lineWidth=width; ctx.lineJoin='round'; ctx.lineCap='round';
-  ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(pts[0][0]*W,pts[0][1]*H);
-  for(let i=1;i<pts.length;i++){
-    const mx=(pts[i-1][0]+pts[i][0])/2*W, my=(pts[i-1][1]+pts[i][1])/2*H;
-    ctx.quadraticCurveTo(pts[i-1][0]*W,pts[i-1][1]*H,mx,my);
-  }
-  ctx.stroke(); ctx.globalAlpha=1;
-
-  if(idx===selectedRoute){
-    const progress=((frame*0.8)%(pts.length*30))/(pts.length*30);
-    let totalLen=0; const lens=[];
-    for(let i=1;i<pts.length;i++){
-      const l=Math.hypot((pts[i][0]-pts[i-1][0])*W,(pts[i][1]-pts[i-1][1])*H);
-      lens.push(l); totalLen+=l;
-    }
-    let rem=progress*totalLen,seg=0;
-    while(seg<lens.length-1&&rem>lens[seg]){rem-=lens[seg];seg++;}
-    const t=rem/lens[seg];
-    const px=(pts[seg][0]+(pts[seg+1][0]-pts[seg][0])*t)*W;
-    const py=(pts[seg][1]+(pts[seg+1][1]-pts[seg][1])*t)*H;
-    ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);
-    ctx.fillStyle=r.color;ctx.globalAlpha=0.9;ctx.fill();
-    ctx.beginPath();ctx.arc(px,py,9,0,Math.PI*2);
-    ctx.fillStyle=r.color;ctx.globalAlpha=0.25;ctx.fill();
-    ctx.globalAlpha=1;
-  }
-}
-
-function drawPin(x,y,color,label){
-  ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);
-  ctx.fillStyle=color;ctx.globalAlpha=0.2;ctx.fill();
-  ctx.globalAlpha=1;
-  ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);
-  ctx.fillStyle=color;ctx.fill();
-  ctx.fillStyle='#0c1220';ctx.font='bold 7px Syne';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(label,x,y);
-}
-
-/* ═══════════════════════════════════════════════
-   API CALLS — all routed through Netlify functions
-═══════════════════════════════════════════════ */
-async function fetchRoutes(){
-  const origin      = `${CONFIG.home.lat},${CONFIG.home.lon}`;
-  const destination = `${CONFIG.work.lat},${CONFIG.work.lon}`;
-
-  // Try Google Maps directions first
-  const res = await fetch(`/api/google-maps?type=directions&origin=${origin}&destination=${destination}&alternatives=true`);
-  if(!res.ok) throw new Error('Google Maps API error');
-  const data = await res.json();
-
-  if(data.status !== 'OK' || !data.routes?.length) throw new Error('No routes returned');
-
-  return data.routes.map((r,i)=>{
-    const leg = r.legs[0];
-    const congestion = Math.round((leg.duration_in_traffic?.value / leg.duration?.value - 1) * 100);
-    return {
-      name:       r.summary || `Route ${i+1}`,
-      eta:        Math.round((leg.duration_in_traffic?.value || leg.duration.value) / 60),
-      distance:   (leg.distance.value / 1000).toFixed(1),
-      congestion: Math.max(0, Math.min(99, congestion || i * 30)),
-    };
-  });
-}
-
-async function fetchIncidents(){
-  const res = await fetch(`/api/tomtom-traffic?type=incidents&bbox=${CONFIG.bbox}`);
-  if(!res.ok) throw new Error('TomTom incidents error');
-  const data = await res.json();
-  return data.incidents || [];
-}
-
-async function fetchFlow(){
-  const res = await fetch(`/api/tomtom-traffic?type=flow&bbox=${CONFIG.bbox}`);
-  if(!res.ok) throw new Error('TomTom flow error');
-  return await res.json();
-}
-
-/* ═══════════════════════════════════════════════
-   RENDER FUNCTIONS
-═══════════════════════════════════════════════ */
-function renderRoutes(routes){
-  const colors   = ['green','amber','red'];
-  const labels   = ['LEAST TRAFFIC','MODERATE','HEAVY TRAFFIC'];
-  const fills    = ['fill-green','fill-amber','fill-red'];
-  const etaColor = ['var(--green)','var(--amber)','var(--red)'];
-
-  // Sort by ETA ascending so best route is always first
-  routes.sort((a,b)=>a.eta-b.eta);
-
+/* ── SIDEBAR ROUTE CARDS ────────────────────────────── */
+function renderRouteSidebar(routes) {
   const container = document.getElementById('routeList');
-  container.innerHTML = routes.map((r,i)=>`
-    <div class="route-card${i===0?' best':''} ${i===selectedRoute?' selected':''}" id="r${i}" onclick="selectRoute(${i},${r.eta},'${r.name}')">
+  const sorted = routes.map((r, i) => {
+    const leg = r.legs[0];
+    const trafficSec = leg.duration_in_traffic?.value || leg.duration.value;
+    const normalSec  = leg.duration.value;
+    const cong = Math.max(0, Math.min(99, Math.round((trafficSec / normalSec - 1) * 100)));
+    return {
+      idx: i, name: r.summary || `Route ${i+1}`,
+      eta: Math.round(trafficSec / 60),
+      dist: (leg.distance.value / 1000).toFixed(1),
+      congestion: cong, steps: leg.steps,
+      arrivalTime: leg.duration_in_traffic?.text || leg.duration.text,
+    };
+  }).sort((a, b) => a.eta - b.eta);
+
+  const badges  = ['BEST','MODERATE','SLOWER'];
+  const badgeCls= ['badge-g','badge-a','badge-r'];
+  const gradients = [
+    'linear-gradient(90deg,#0fa84e,#1fdf72)',
+    'linear-gradient(90deg,#c4831a,#f5a41f)',
+    'linear-gradient(90deg,#b53030,#ef4343)',
+  ];
+
+  container.innerHTML = sorted.map((r, rank) => `
+    <div class="route-card r${rank} ${r.idx===selectedRouteIdx?'selected':''}" id="rc${r.idx}" onclick="selectRouteIdx(${r.idx})" style="margin-bottom:8px">
       <div class="route-header">
         <div class="route-name">Via ${r.name}</div>
-        <div class="route-badge badge-${colors[Math.min(i,2)]}">${labels[Math.min(i,2)]}</div>
+        <div class="route-badge ${badgeCls[rank]}">${badges[rank]||'ALT'}</div>
       </div>
-      <div class="route-meta">
-        <div class="meta-item">
-          <div class="meta-val" style="color:${etaColor[Math.min(i,2)]}">${r.eta}<span style="font-size:12px">min</span></div>
-          <div class="meta-key">ETA</div>
+      <div class="route-stats">
+        <div class="stat">
+          <div class="stat-val" style="color:${['var(--green)','var(--amber)','var(--red)'][rank]}">${r.eta}<span style="font-size:11px;font-weight:400">m</span></div>
+          <div class="stat-key">ETA</div>
         </div>
-        <div class="meta-item">
-          <div class="meta-val">${r.distance}<span style="font-size:12px">km</span></div>
-          <div class="meta-key">Distance</div>
+        <div class="stat">
+          <div class="stat-val">${r.dist}<span style="font-size:11px;font-weight:400">km</span></div>
+          <div class="stat-key">Distance</div>
         </div>
-        <div class="meta-item">
-          <div class="meta-val" style="color:${etaColor[Math.min(i,2)]}">${r.congestion}%</div>
-          <div class="meta-key">Congestion</div>
+        <div class="stat">
+          <div class="stat-val" style="color:${['var(--green)','var(--amber)','var(--red)'][rank]}">${r.congestion}%</div>
+          <div class="stat-key">Congestion</div>
         </div>
       </div>
-      <div class="traffic-bar"><div class="traffic-fill ${fills[Math.min(i,2)]}" style="width:${r.congestion}%"></div></div>
+      <div class="traffic-bar">
+        <div class="traffic-fill" style="width:${r.congestion}%;background:${gradients[rank]}"></div>
+      </div>
+      <button class="go-btn" onclick="startNavigation(event,${r.idx})">▶ START NAVIGATION</button>
     </div>
   `).join('');
 
-  // Update ETA chip with best route
-  if(routes.length){
-    document.getElementById('etaMain').innerHTML = routes[0].eta + '<span style="font-size:14px;font-weight:400">min</span>';
-    document.getElementById('etaSub').textContent = 'via ' + routes[0].name;
+  // Update ETA chip
+  if (sorted.length) {
+    document.getElementById('etaVal').innerHTML = sorted[0].eta + '<span style="font-size:13px;font-weight:400">m</span>';
+    document.getElementById('etaSub').textContent = 'via ' + sorted[0].name;
   }
 }
 
-function renderFallbackRoutes(){
-  renderRoutes([
-    { name:'Constant Spring Rd', eta:18, distance:'7.2', congestion:12 },
-    { name:'Half Way Tree',      eta:31, distance:'5.8', congestion:54 },
-    { name:'Washington Blvd',    eta:47, distance:'6.4', congestion:81 },
-  ]);
-}
-
-function renderIncidents(incidents){
-  const container = document.getElementById('incidents');
-  if(!incidents.length){
-    container.innerHTML = '<div class="incident-item"><div class="inc-icon" style="background:rgba(34,217,122,0.15);color:var(--green)">✓</div><div class="inc-text"><strong>All clear</strong><br>No incidents reported on your routes.</div></div>';
-    return;
-  }
-  const iconMap = { 1:'🚧', 2:'⚠', 3:'⚠', 6:'🚗', 14:'🌧' };
-  const colorMap= { 0:'var(--blue)', 1:'var(--amber)', 2:'var(--amber)', 3:'var(--red)', 4:'var(--red)' };
-  const bgMap   = { 0:'rgba(79,163,247,0.15)', 1:'rgba(245,166,35,0.15)', 2:'rgba(245,166,35,0.15)', 3:'rgba(240,82,82,0.15)', 4:'rgba(240,82,82,0.15)' };
-
-  container.innerHTML = incidents.slice(0,5).map(inc=>{
-    const props   = inc.properties || {};
-    const delay   = props.magnitudeOfDelay || 0;
-    const icon    = iconMap[props.iconCategory] || '⚠';
-    const color   = colorMap[delay] || 'var(--amber)';
-    const bg      = bgMap[delay]    || 'rgba(245,166,35,0.15)';
-    const desc    = props.events?.[0]?.description || 'Traffic incident reported';
-    const from    = props.from || '';
-    const to      = props.to   || '';
-    return `<div class="incident-item">
-      <div class="inc-icon" style="background:${bg};color:${color}">${icon}</div>
-      <div class="inc-text"><strong>${from}${to?' → '+to:''}</strong><br>${desc}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderFallbackIncidents(){
-  document.getElementById('incidents').innerHTML = `
-    <div class="incident-item">
-      <div class="inc-icon" style="background:rgba(240,82,82,0.15);color:var(--red)">⚠</div>
-      <div class="inc-text"><strong>Accident — Half Way Tree Rd</strong><br>2-lane block near Liguanea. Expect 20+ min delay.</div>
+function renderFallbackSidebar() {
+  const container = document.getElementById('routeList');
+  const routes = [
+    { name:'Constant Spring Rd', eta:18, dist:'7.2', congestion:12 },
+    { name:'Half Way Tree',      eta:31, dist:'5.8', congestion:54 },
+    { name:'Washington Blvd',    eta:47, dist:'6.4', congestion:81 },
+  ];
+  const badges  = ['BEST','MODERATE','SLOWER'];
+  const badgeCls= ['badge-g','badge-a','badge-r'];
+  container.innerHTML = routes.map((r, i) => `
+    <div class="route-card r${i} ${i===0?'selected':''}" style="margin-bottom:8px">
+      <div class="route-header">
+        <div class="route-name">Via ${r.name}</div>
+        <div class="route-badge ${badgeCls[i]}">${badges[i]}</div>
+      </div>
+      <div class="route-stats">
+        <div class="stat"><div class="stat-val" style="color:${['var(--green)','var(--amber)','var(--red)'][i]}">${r.eta}<span style="font-size:11px">m</span></div><div class="stat-key">ETA</div></div>
+        <div class="stat"><div class="stat-val">${r.dist}<span style="font-size:11px">km</span></div><div class="stat-key">Distance</div></div>
+        <div class="stat"><div class="stat-val" style="color:${['var(--green)','var(--amber)','var(--red)'][i]}">${r.congestion}%</div><div class="stat-key">Congestion</div></div>
+      </div>
+      <div class="traffic-bar"><div class="traffic-fill" style="width:${r.congestion}%;background:linear-gradient(90deg,#0fa84e,#1fdf72)"></div></div>
     </div>
-    <div class="incident-item">
-      <div class="inc-icon" style="background:rgba(245,166,35,0.15);color:var(--amber)">🚧</div>
-      <div class="inc-text"><strong>Roadwork — Washington Blvd</strong><br>Lane closure until 9:00 AM. Slow-moving.</div>
+  `).join('');
+  document.getElementById('etaVal').innerHTML = '18<span style="font-size:13px;font-weight:400">m</span>';
+  document.getElementById('etaSub').textContent = 'via Constant Spring Rd (demo)';
+}
+
+/* ── SELECT ROUTE ──────────────────────────────────── */
+function selectRouteIdx(idx) {
+  selectedRouteIdx = idx;
+  document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('rc' + idx);
+  if (card) card.classList.add('selected');
+
+  // Re-weight polylines
+  if (directionsRenderers.length) {
+    directionsRenderers.forEach((r, i) => {
+      r.setOptions({ polylineOptions: {
+        strokeOpacity: i === idx ? 0.95 : 0.30,
+        strokeWeight:  i === idx ? 7 : 3,
+        strokeColor:   ROUTE_COLORS[i % ROUTE_COLORS.length],
+        zIndex:        i === idx ? 10 : 1,
+      }});
+    });
+  }
+
+  // Update ETA chip
+  if (allRoutes[idx]) {
+    const leg = allRoutes[idx].legs[0];
+    const mins = Math.round((leg.duration_in_traffic?.value || leg.duration.value) / 60);
+    document.getElementById('etaVal').innerHTML = mins + '<span style="font-size:13px;font-weight:400">m</span>';
+    document.getElementById('etaSub').textContent = 'via ' + (allRoutes[idx].summary || 'Route ' + (idx+1));
+  }
+}
+
+/* ── NAVIGATION MODE ─────────────────────────────────── */
+function startNavigation(e, routeIdx) {
+  e.stopPropagation();
+  if (!allRoutes[routeIdx]) return;
+  const leg  = allRoutes[routeIdx].legs[0];
+  navSteps   = leg.steps;
+  navMode    = true;
+  currentStepIdx = 0;
+  selectedRouteIdx = routeIdx;
+
+  // Switch to Navigate tab
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===1));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-navigate').classList.add('active');
+
+  document.getElementById('noNavMsg').style.display = 'none';
+  document.getElementById('stepsContainer').style.display = 'block';
+
+  const mins = Math.round((leg.duration_in_traffic?.value || leg.duration.value) / 60);
+  document.getElementById('navEtaBig').textContent = mins + ' min';
+  document.getElementById('navRouteName').textContent = 'via ' + (allRoutes[routeIdx].summary || 'Route');
+
+  renderSteps(navSteps);
+  showNavInstruction(0);
+
+  // Set map to navigation tilt view
+  if (gmap) {
+    gmap.setMapTypeId('roadmap');
+    document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('btnRoad').classList.add('active');
+    gmap.setZoom(15);
+    const start = leg.start_location;
+    gmap.setCenter({ lat: start.lat(), lng: start.lng() });
+  }
+
+  // Track user location
+  if (navigator.geolocation) {
+    watchId = navigator.geolocation.watchPosition(pos => {
+      const ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (!userMarker) {
+        userMarker = new google.maps.Marker({
+          position: ll, map: gmap,
+          icon: {
+            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+            scale: 5, fillColor: '#3d9ef5', fillOpacity: 1,
+            strokeColor: '#fff', strokeWeight: 2, rotation: pos.coords.heading || 0,
+          },
+          zIndex: 999,
+        });
+      } else {
+        userMarker.setPosition(ll);
+      }
+      gmap.panTo(ll);
+      advanceStep(ll);
+    }, null, { enableHighAccuracy: true, maximumAge: 2000 });
+  }
+
+  document.getElementById('navInstruction').classList.add('visible');
+  document.getElementById('liveLabel').textContent = '▶ Navigation active';
+}
+
+function stopNavigation() {
+  navMode = false;
+  if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (userMarker) { userMarker.setMap(null); userMarker = null; }
+  document.getElementById('navInstruction').classList.remove('visible');
+  document.getElementById('noNavMsg').style.display = 'block';
+  document.getElementById('stepsContainer').style.display = 'none';
+  document.getElementById('liveLabel').textContent = 'Live traffic data';
+}
+
+function advanceStep(userPos) {
+  if (!navSteps || currentStepIdx >= navSteps.length) return;
+  const step = navSteps[currentStepIdx];
+  const end  = step.end_location;
+  const dist = haversine(userPos.lat, userPos.lng, end.lat(), end.lng());
+  if (dist < 50) {
+    currentStepIdx = Math.min(currentStepIdx + 1, navSteps.length - 1);
+    showNavInstruction(currentStepIdx);
+    highlightStep(currentStepIdx);
+  }
+}
+
+function showNavInstruction(idx) {
+  if (!navSteps || !navSteps[idx]) return;
+  const step = navSteps[idx];
+  const inst = document.getElementById('navInstruction');
+  const icon = getTurnIcon(step.maneuver);
+  document.getElementById('navTurnIcon').textContent = icon;
+  document.getElementById('navTurnText').innerHTML = stripHtml(step.instructions);
+  document.getElementById('navTurnDist').textContent = 'in ' + step.distance.text;
+  inst.classList.add('visible');
+}
+
+function highlightStep(idx) {
+  document.querySelectorAll('.step-item').forEach((el, i) => {
+    el.classList.toggle('current', i === idx);
+    if (i === idx) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+function renderSteps(steps) {
+  const list = document.getElementById('stepsList');
+  list.innerHTML = steps.map((s, i) => `
+    <div class="step-item ${i===0?'current':''}" id="step${i}">
+      <div class="step-icon">${getTurnIcon(s.maneuver)}</div>
+      <div class="step-text">
+        <strong>${stripHtml(s.instructions)}</strong>
+        <div class="step-dist">${s.distance.text} · ${s.duration.text}</div>
+      </div>
     </div>
-    <div class="incident-item">
-      <div class="inc-icon" style="background:rgba(79,163,247,0.15);color:var(--blue)">ℹ</div>
-      <div class="inc-text"><strong>Constant Spring Rd — Clear</strong><br>No incidents. Recommended route.</div>
-    </div>`;
+  `).join('');
 }
 
-/* ═══════════════════════════════════════════════
-   MAIN DATA LOADER
-═══════════════════════════════════════════════ */
-async function loadAllData(){
-  setStatus('loading','Fetching live traffic…');
-  let anyLive = false;
+function getTurnIcon(maneuver) {
+  const m = maneuver || '';
+  if (m.includes('left')) return '↰';
+  if (m.includes('right')) return '↱';
+  if (m.includes('uturn')) return '↩';
+  if (m.includes('roundabout')) return '↺';
+  if (m.includes('merge')) return '⤵';
+  if (m.includes('ramp')) return '⤴';
+  if (m.includes('straight') || m.includes('continue')) return '↑';
+  if (m.includes('arrive')) return '📍';
+  return '↑';
+}
 
-  // Routes
-  try {
-    const routes = await fetchRoutes();
-    renderRoutes(routes);
-    anyLive = true;
-  } catch(e) {
-    console.warn('Routes fallback:', e.message);
-    renderFallbackRoutes();
-  }
+function haversine(lat1, lon1, lat2, lon2) {
+  const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 
-  // Incidents
-  try {
-    const incidents = await fetchIncidents();
-    renderIncidents(incidents);
-    anyLive = true;
-  } catch(e) {
-    console.warn('Incidents fallback:', e.message);
-    renderFallbackIncidents();
-  }
+function stripHtml(html) { const t=document.createElement('div');t.innerHTML=html;return t.textContent; }
 
-  // Flow (for heatmap intensity — optional)
-  try {
-    await fetchFlow();
-    // Could update liveHotspots here based on flow data
-  } catch(e) {
-    console.warn('Flow fallback:', e.message);
-  }
+/* ── MAP TYPE & LAYERS ──────────────────────────────── */
+function setMapType(type, btn) {
+  if (!gmap) return;
+  gmap.setMapTypeId(type);
+  if (type === 'roadmap') gmap.setOptions({ styles: darkMapStyle() });
+  else gmap.setOptions({ styles: [] });
+  document.querySelectorAll('#btnRoad,#btnSat,#btnHybrid').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
 
-  const now = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  if(anyLive){
-    setStatus('live', `Live data · updated ${now}`);
-    document.getElementById('liveLabel').textContent = `Live traffic · updated ${now}`;
-  } else {
-    setStatus('demo','Demo mode · add API keys to go live');
-    document.getElementById('liveLabel').textContent = 'Demo mode · no API keys yet';
+function toggleTraffic(btn) {
+  trafficVisible = !trafficVisible;
+  trafficLayer.setMap(trafficVisible ? gmap : null);
+  btn.classList.toggle('active', trafficVisible);
+}
+
+function goToMyLocation() {
+  if (!gmap) return;
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      gmap.setCenter(ll);
+      gmap.setZoom(15);
+    });
   }
 }
 
-function setStatus(type, text){
-  const banner = document.getElementById('statusBanner');
-  banner.className = `status-banner ${type}`;
+/* ── SWAP LOCATIONS ────────────────────────────────── */
+function swapLocations() {
+  const a = document.getElementById('originInput');
+  const b = document.getElementById('destInput');
+  [a.value, b.value] = [b.value, a.value];
+}
+
+/* ── TAB SWITCHER ──────────────────────────────────── */
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+/* ── STATUS ────────────────────────────────────────── */
+function setStatus(type, text) {
+  const b = document.getElementById('statusBanner');
+  b.className = 'status-banner ' + type;
   const icons = { loading:'<span class="spin">◌</span>', live:'●', demo:'◈' };
   document.getElementById('statusText').innerHTML = (icons[type]||'') + ' ' + text;
 }
 
-/* ═══════════════════════════════════════════════
-   DEPARTURE CHART
-═══════════════════════════════════════════════ */
-function buildChart(){
+/* ── DEPARTURE CHART ───────────────────────────────── */
+function buildChart() {
   const now  = new Date();
-  const nowH = now.getHours() + now.getMinutes()/60;
-  const congestion = [15,12,10,14,25,42,68,82,79,72,60,50,45,48,55,62,58,45,35,28,20,15,12,10];
-  const baseH = 5.5;
-  const slots = [];
-  for(let i=0;i<16;i++){
-    const h=baseH+i*0.25;
-    slots.push({h, c:congestion[Math.floor(h*2)%congestion.length]});
-  }
-  const minC    = Math.min(...slots.map(s=>s.c));
-  const bestIdx = slots.findIndex(s=>s.c===minC);
+  const nowH = now.getHours() + now.getMinutes() / 60;
+  const congestion = [10,8,8,10,20,38,65,80,75,68,55,48,42,46,52,60,55,42,32,24,18,13,10,8];
+  const base = 5.5;
+  const slots = Array.from({length:18}, (_, i) => {
+    const h = base + i * 0.25;
+    return { h, c: congestion[Math.floor(h * 2) % congestion.length] };
+  });
+  const minC = Math.min(...slots.map(s => s.c));
+  const bestIdx = slots.findIndex(s => s.c === minC);
   const container = document.getElementById('chartBars');
   container.innerHTML = '';
-  slots.forEach((s,i)=>{
-    const pct   = s.c/90;
-    const color = s.c<30?'#22d97a':s.c<60?'#f5a623':'#f05252';
-    const isBest= i===bestIdx;
-    const col   = document.createElement('div');
-    col.className='bar-col';
-    col.innerHTML=`<div class="bar${isBest?' best-bar':''}" style="height:${Math.max(pct*60,4)}px;background:${color};opacity:${isBest?1:0.6};flex:1;position:relative">${isBest?'<span class="best-tag">best</span>':''}</div><div class="bar-label">${i%3===0?formatTime(s.h):''}</div>`;
+  slots.forEach((s, i) => {
+    const pct = s.c / 90;
+    const color = s.c < 30 ? '#1fdf72' : s.c < 58 ? '#f5a41f' : '#ef4343';
+    const isBest = i === bestIdx;
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    col.innerHTML = `
+      <div class="bar-inner${isBest?' best':''}" style="height:${Math.max(pct*60,3)}px;background:${color};opacity:${isBest?1:0.55}">
+        ${isBest?'<span class="best-tag">best</span>':''}
+      </div>
+      <div class="bar-lbl">${i%4===0?formatHr(s.h):''}</div>`;
     container.appendChild(col);
   });
-  const frac = (nowH-baseH)/(16*0.25);
-  const marker = document.getElementById('nowMarker');
-  if(frac>=0&&frac<=1) marker.style.left=(frac*100).toFixed(1)+'%';
-  document.getElementById('bestWindow').textContent = formatTime(slots[bestIdx].h)+' — '+formatTime(slots[bestIdx].h+0.5);
+  const frac = (nowH - base) / (18 * 0.25);
+  const line = document.getElementById('nowLine');
+  if (frac >= 0 && frac <= 1) line.style.left = (frac * 100).toFixed(1) + '%';
+  const bh = slots[bestIdx];
+  document.getElementById('departBest').innerHTML = `Best window: <strong>${formatHr(bh.h)} – ${formatHr(bh.h + 0.5)}</strong>`;
 }
 
-function formatTime(h){
-  const hh=Math.floor(h)%12||12, mm=h%1===0?'00':'30', ap=Math.floor(h)<12?'AM':'PM';
-  return `${hh}:${mm} ${ap}`;
+function formatHr(h) {
+  const hh = Math.floor(h) % 12 || 12;
+  const mm = h % 1 === 0 ? '00' : '30';
+  const ap = Math.floor(h) < 12 ? 'AM' : 'PM';
+  return `${hh}:${mm}${ap}`;
 }
 
-/* ═══════════════════════════════════════════════
-   UI HELPERS
-═══════════════════════════════════════════════ */
-function selectRoute(i, eta, name){
-  selectedRoute = i;
-  document.querySelectorAll('.route-card').forEach((c,j)=>c.classList.toggle('selected',i===j));
-  if(eta && name){
-    document.getElementById('etaMain').innerHTML=eta+'<span style="font-size:14px;font-weight:400">min</span>';
-    document.getElementById('etaSub').textContent='via '+name;
+/* ── INCIDENTS ─────────────────────────────────────── */
+function renderFallbackIncidents() {
+  document.getElementById('incidentsList').innerHTML = `
+    <div class="section-label">Live incidents</div>
+    <div class="inc-item"><div class="inc-dot" style="background:var(--red)"></div><div class="inc-body"><strong>Accident — Half Way Tree Rd</strong><br>2-lane block near Liguanea. Expect 20+ min delay.</div></div>
+    <div class="inc-item"><div class="inc-dot" style="background:var(--amber)"></div><div class="inc-body"><strong>Roadwork — Washington Blvd</strong><br>Lane closure until 9:00 AM. Slow-moving traffic.</div></div>
+    <div class="inc-item"><div class="inc-dot" style="background:var(--blue)"></div><div class="inc-body"><strong>Constant Spring Rd</strong><br>Clear. No incidents reported.</div></div>
+    <div class="inc-item"><div class="inc-dot" style="background:var(--amber)"></div><div class="inc-body"><strong>New Kingston — Trafalgar Rd</strong><br>Minor congestion near Emancipation Park.</div></div>
+  `;
+}
+
+/* ── DARK MAP STYLE ────────────────────────────────── */
+function darkMapStyle() {
+  return [
+    {elementType:'geometry',stylers:[{color:'#0c1220'}]},
+    {elementType:'labels.text.stroke',stylers:[{color:'#0c1220'}]},
+    {elementType:'labels.text.fill',  stylers:[{color:'#4a5a80'}]},
+    {featureType:'administrative.locality',elementType:'labels.text.fill',stylers:[{color:'#6b7a9b'}]},
+    {featureType:'poi',elementType:'labels.text.fill',stylers:[{color:'#2a3450'}]},
+    {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#0f1a28'}]},
+    {featureType:'poi.park',elementType:'labels.text.fill',stylers:[{color:'#1f3020'}]},
+    {featureType:'road',elementType:'geometry',stylers:[{color:'#1c2540'}]},
+    {featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#141d30'}]},
+    {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#7a87a8'}]},
+    {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#243055'}]},
+    {featureType:'road.highway',elementType:'geometry.stroke',stylers:[{color:'#1c2540'}]},
+    {featureType:'road.highway',elementType:'labels.text.fill',stylers:[{color:'#8899bb'}]},
+    {featureType:'transit',elementType:'geometry',stylers:[{color:'#0f1520'}]},
+    {featureType:'transit.station',elementType:'labels.text.fill',stylers:[{color:'#4a5a80'}]},
+    {featureType:'water',elementType:'geometry',stylers:[{color:'#080e1a'}]},
+    {featureType:'water',elementType:'labels.text.fill',stylers:[{color:'#1a2a40'}]},
+    {featureType:'water',elementType:'labels.text.stroke',stylers:[{color:'#080e1a'}]},
+  ];
+}
+
+/* ── AUTO-REFRESH ──────────────────────────────────── */
+setInterval(() => { if (!navMode) searchRoutes(); }, REFRESH_MS);
+</script>
+
+<!-- Load Google Maps JS API — replace YOUR_KEY_HERE -->
+<script>
+(function() {
+  const key = GOOGLE_MAPS_KEY;
+  if (!key || key === 'YOUR_KEY_HERE') {
+    console.warn('ClearPath: No Google Maps API key set. Using fallback demo mode.');
+    document.getElementById('keyNotice').classList.add('show');
+    document.getElementById('statusText').innerHTML = '◈ Demo mode — add API key to index.html';
+    document.getElementById('statusBanner').className = 'status-banner demo';
+    // Fallback: show demo sidebar
+    setTimeout(() => { renderFallbackSidebar(); renderFallbackIncidents(); buildChart(); }, 100);
+    return;
   }
-}
-function toggleLayer(btn,layer){
-  if(layer==='heat'){showHeat=!showHeat;btn.classList.toggle('active',showHeat);}
-  else btn.classList.toggle('active');
-}
-function setLoc(i){
-  document.querySelectorAll('.loc-pill').forEach((p,j)=>p.classList.toggle('active',j===i));
-}
-function addLoc(){
-  const name=prompt('Enter place name (e.g. Gym — Liguanea):');
-  if(!name)return;
-  const container=document.querySelector('.saved-locations');
-  const addBtn=container.querySelector('.loc-pill:last-child');
-  const pill=document.createElement('div');
-  pill.className='loc-pill';
-  pill.textContent='📍 '+name;
-  container.insertBefore(pill,addBtn);
-}
-function updateClock(){
-  document.getElementById('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-
-/* ═══════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════ */
-resize();
-window.addEventListener('resize', resize);
-buildChart();
-drawMap();
-updateClock();
-setInterval(updateClock, 1000);
-loadAllData();
-setInterval(loadAllData, CONFIG.refreshMs);
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&callback=initMap`;
+  s.async = true; s.defer = true;
+  document.head.appendChild(s);
+})();
 </script>
 </body>
 </html>
