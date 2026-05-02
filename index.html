@@ -337,9 +337,9 @@ html, body {
     <div class="map-wrap">
       <div id="googleMap"></div>
       <div class="map-controls">
-        <button class="mc-btn active" id="btnRoad"   onclick="setMapType('roadmap',this)">🗺 Map</button>
+        <button class="mc-btn"        id="btnRoad"   onclick="setMapType('roadmap',this)">🗺 Map</button>
         <button class="mc-btn"        id="btnSat"    onclick="setMapType('satellite',this)">🛰 Satellite</button>
-        <button class="mc-btn"        id="btnHybrid" onclick="setMapType('hybrid',this)">🌐 Hybrid</button>
+        <button class="mc-btn active" id="btnHybrid" onclick="setMapType('hybrid',this)">🌐 Hybrid</button>
         <button class="mc-btn active" id="btnTraffic" onclick="toggleTraffic(this)">🔴 Traffic</button>
         <button class="mc-btn"        onclick="goMyLoc()">📍 My Loc</button>
       </div>
@@ -400,18 +400,12 @@ function initMap() {
   gmap = new google.maps.Map(mapEl, {
     center: KINGSTON_CENTER,
     zoom: 13,
-    mapTypeId: 'roadmap',
+    mapTypeId: 'hybrid', // Satellite imagery + road labels
     disableDefaultUI: true,
     zoomControl: true,
     fullscreenControl: true,
     gestureHandling: 'greedy',
-    // Dark style applied after init to avoid tile-load race condition
   });
-
-  // Apply dark style after a short delay so tiles load first
-  setTimeout(() => {
-    gmap.setOptions({ styles: darkStyle() });
-  }, 800);
 
   dirSvc       = new google.maps.DirectionsService();
   geocoder     = new google.maps.Geocoder();
@@ -830,7 +824,7 @@ function startNav(e, idx) {
   document.getElementById('navRoute').textContent = 'via ' + (allRoutes[idx].summary || 'Route');
   renderSteps(navSteps);
   showBubble(0);
-  gmap.setMapTypeId('roadmap');
+  gmap.setMapTypeId('hybrid');
   gmap.setZoom(16);
   gmap.setCenter({ lat: l.start_location.lat(), lng: l.start_location.lng() });
   if (navigator.geolocation) {
