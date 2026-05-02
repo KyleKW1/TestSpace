@@ -160,8 +160,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .inc-body strong{color:var(--text);}
 
 /* MAP */
-.map-wrap{position:relative;overflow:hidden;background:#0c1220;flex:1;min-width:0;min-height:0;}
-#googleMap{position:absolute;top:0;left:0;right:0;bottom:0;}
+.map-wrap{position:relative;overflow:hidden;background:#0c1220;flex:1;min-width:0;min-height:0;display:block;}
+#googleMap{width:100%;height:100%;display:block;}
 .map-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:10;}
 .mc-btn{background:rgba(9,12,19,0.88);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;color:var(--muted);cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;white-space:nowrap;}
 .mc-btn:hover{border-color:var(--muted);color:var(--text);}
@@ -395,14 +395,23 @@ function initMap() {
   buildChart();
   renderIncidents();
 
-  // Google Maps measures its container at init — if layout isn't painted yet it sees 0x0.
-  // Fire resize at 100ms, 500ms and 1s to guarantee tiles appear.
-  [100, 500, 1000].forEach(ms => {
-    setTimeout(() => {
-      google.maps.event.trigger(gmap, 'resize');
-      gmap.setCenter(KINGSTON_CENTER);
-    }, ms);
+  // Use ResizeObserver — fires the instant #googleMap has real pixel dimensions,
+  // regardless of how long layout takes. Much more reliable than setTimeout.
+  const mapEl = document.getElementById('googleMap');
+  const ro = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+        google.maps.event.trigger(gmap, 'resize');
+        gmap.setCenter(KINGSTON_CENTER);
+        ro.disconnect(); // only need it once
+      }
+    }
   });
+  ro.observe(mapEl);
+
+  // Belt-and-suspenders: also try after short delays
+  setTimeout(() => { google.maps.event.trigger(gmap, 'resize'); gmap.setCenter(KINGSTON_CENTER); }, 300);
+  setTimeout(() => { google.maps.event.trigger(gmap, 'resize'); gmap.setCenter(KINGSTON_CENTER); }, 1000);
 }
 
 /* ─────────────────────────────────────────
@@ -1092,14 +1101,26 @@ setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
     setTimeout(() => { buildChart(); renderIncidents(); }, 100);
     return;
   }
+  // Wrap the real initMap so it runs after the browser has painted layout
+  window._initMapReal = window.initMap;
+  window.initMap = function() {
+    // requestAnimationFrame fires after paint — guarantees #googleMap has real dimensions
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window._initMapReal();
+      });
+    });
+  };
   const s = document.createElement('script');
-  s.src   = `https://maps.googleapis.com/maps/api/js?key=${k}&libraries=places,geometry&callback=initMap&loading=async`;
+  s.src   = `https://maps.googleapis.com/maps/api/js?key=${k}&libraries=places,geometry&callback=initMap`;
   s.async = true;
   s.defer = true;
   s.onerror = () => {
     document.getElementById('statusBanner').className = 'status-banner err';
     document.getElementById('statusText').textContent = 'Failed to load Google Maps — check API key & billing';
   };
+  document.head.appendChild(s);
+})();
   document.head.appendChild(s);
 })();
 </script>
