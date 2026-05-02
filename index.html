@@ -21,7 +21,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 @media(max-width:768px){.main{flex-direction:column;}.sidebar{order:2;max-height:45vh;flex-shrink:0;}.map-wrap{order:1;}}
 
 /* TOP NAV */
-.topnav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 14px;position:relative;z-index:200;}
+.topnav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 14px;position:relative;z-index:200;height:var(--nav-h);flex-shrink:0;}
 .logo{font-size:17px;font-weight:800;letter-spacing:-0.5px;flex-shrink:0;}
 .logo em{color:var(--green);font-style:normal;}
 .od-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
@@ -64,7 +64,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .ac-empty{padding:12px;text-align:center;font-size:11px;color:var(--red);font-family:'DM Mono',monospace;}
 
 /* CONFIRM BAR */
-.confirm-bar{background:var(--surface);border-bottom:1px solid var(--border);overflow:hidden;max-height:0;transition:max-height 0.35s ease;z-index:150;position:relative;}
+.confirm-bar{background:var(--surface);border-bottom:1px solid var(--border);overflow:hidden;max-height:0;transition:max-height 0.35s ease;z-index:150;position:relative;flex-shrink:0;}
 .confirm-bar.open{max-height:110px;}
 .confirm-inner{display:flex;}
 .place-card{flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-right:1px solid var(--border);position:relative;min-width:0;}
@@ -159,9 +159,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .inc-body{font-size:12px;line-height:1.5;color:var(--muted);}
 .inc-body strong{color:var(--text);}
 
-/* MAP */
-.map-wrap{position:relative;overflow:hidden;background:#0c1220;flex:1;min-width:0;min-height:0;display:block;}
-#googleMap{width:100%;height:100%;display:block;}
+/* MAP — FIX: ensure full height */
+.map-wrap{position:relative;overflow:hidden;background:#0c1220;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
+#googleMap{width:100%;flex:1;min-height:300px;}
 .map-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:10;}
 .mc-btn{background:rgba(9,12,19,0.88);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;color:var(--muted);cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;white-space:nowrap;}
 .mc-btn:hover{border-color:var(--muted);color:var(--text);}
@@ -331,7 +331,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 <script>
 /* ─────────────────────────────────────────
-   CONFIG — replace with your actual key
+   CONFIG
 ───────────────────────────────────────── */
 const GOOGLE_MAPS_KEY = "AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA";
 
@@ -363,10 +363,12 @@ const tick = () => {
 setInterval(tick, 1000); tick();
 
 /* ─────────────────────────────────────────
-   MAP INIT (called by Google Maps callback)
+   MAP INIT
 ───────────────────────────────────────── */
 function initMap() {
-  gmap = new google.maps.Map(document.getElementById('googleMap'), {
+  const mapEl = document.getElementById('googleMap');
+
+  gmap = new google.maps.Map(mapEl, {
     center: KINGSTON_CENTER,
     zoom: 13,
     mapTypeId: 'roadmap',
@@ -382,11 +384,9 @@ function initMap() {
   trafficLayer = new google.maps.TrafficLayer();
   trafficLayer.setMap(gmap);
 
-  // PlacesService needs a map or a DOM node
-  placesService = new google.maps.places.PlacesService(document.getElementById('googleMap'));
+  placesService = new google.maps.places.PlacesService(mapEl);
   autoSvc       = new google.maps.places.AutocompleteService();
 
-  // Close dropdowns on outside click
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#originWrap')) closeDrop('origin');
     if (!e.target.closest('#destWrap'))   closeDrop('dest');
@@ -395,75 +395,55 @@ function initMap() {
   buildChart();
   renderIncidents();
 
-  // Use ResizeObserver — fires the instant #googleMap has real pixel dimensions,
-  // regardless of how long layout takes. Much more reliable than setTimeout.
-  const mapEl = document.getElementById('googleMap');
+  /* Trigger resize once the element has real pixel dimensions */
   const ro = new ResizeObserver((entries) => {
     for (const entry of entries) {
       if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
         google.maps.event.trigger(gmap, 'resize');
         gmap.setCenter(KINGSTON_CENTER);
-        ro.disconnect(); // only need it once
+        ro.disconnect();
       }
     }
   });
   ro.observe(mapEl);
 
-  // Belt-and-suspenders: also try after short delays
   setTimeout(() => { google.maps.event.trigger(gmap, 'resize'); gmap.setCenter(KINGSTON_CENTER); }, 300);
-  setTimeout(() => { google.maps.event.trigger(gmap, 'resize'); gmap.setCenter(KINGSTON_CENTER); }, 1000);
+  setTimeout(() => { google.maps.event.trigger(gmap, 'resize'); gmap.setCenter(KINGSTON_CENTER); }, 1200);
 }
 
 /* ─────────────────────────────────────────
-   AUTOCOMPLETE — INPUT
+   AUTOCOMPLETE
 ───────────────────────────────────────── */
 function onFocus(which) {
-  // If field already confirmed, select all text so user can retype easily
   const inp = getInp(which);
-  if (inp.classList.contains('confirmed')) {
-    inp.select();
-  }
+  if (inp.classList.contains('confirmed')) inp.select();
 }
 
 function onInput(e, which) {
   const val = e.target.value.trim();
-
-  // Clear confirmed state
   if (which === 'origin') { cOrigin = null; setFieldState('origin', 'neutral'); }
   else                    { cDest   = null; setFieldState('dest',   'neutral'); }
   closeBar();
-
   const st = acState[which];
   clearTimeout(st.timer);
-
   if (val.length < 2) { closeDrop(which); return; }
-
   showDrop(which, '<div class="ac-loading"><span class="spin">◌</span> Searching…</div>');
   st.timer = setTimeout(() => fetchSuggestions(which, val), 350);
 }
 
-/* ─────────────────────────────────────────
-   AUTOCOMPLETE — FETCH SUGGESTIONS
-   Strategy: try Jamaica-restricted first,
-   fall back to location-biased global search
-───────────────────────────────────────── */
 function fetchSuggestions(which, input) {
   if (!autoSvc) return;
-
   const kingstonLatLng = new google.maps.LatLng(17.9970, -76.7936);
-
   const jmOpts = {
     input,
     componentRestrictions: { country: 'jm' },
     location: kingstonLatLng,
     radius: 80000,
   };
-
   autoSvc.getPlacePredictions(jmOpts, (predictions, status) => {
     if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
       renderSuggestions(which, predictions);
     } else {
-      // Fallback — no country restriction, bias to Kingston
       const fallbackOpts = {
         input: input + ' Jamaica',
         location: kingstonLatLng,
@@ -474,7 +454,7 @@ function fetchSuggestions(which, input) {
           renderSuggestions(which, p2);
         } else {
           acState[which].suggestions = [];
-          showDrop(which, '<div class="ac-empty">No results — try a full address e.g. "Half Way Tree, Kingston"</div>');
+          showDrop(which, '<div class="ac-empty">No results — try e.g. "Half Way Tree, Kingston"</div>');
         }
       });
     }
@@ -485,7 +465,6 @@ function renderSuggestions(which, predictions) {
   const st = acState[which];
   st.suggestions = predictions;
   st.focusIdx = -1;
-
   const html = predictions.slice(0, 6).map((p, i) => {
     const main = p.structured_formatting ? p.structured_formatting.main_text : p.description;
     const sec  = p.structured_formatting ? (p.structured_formatting.secondary_text || '') : '';
@@ -497,29 +476,19 @@ function renderSuggestions(which, predictions) {
       </div>
     </div>`;
   }).join('');
-
   showDrop(which, html);
 }
 
-/* ─────────────────────────────────────────
-   AUTOCOMPLETE — PICK SUGGESTION
-───────────────────────────────────────── */
 function pickSuggestion(e, which, idx) {
   e.preventDefault();
   const pred = acState[which].suggestions[idx];
   if (!pred) return;
-
-  // Show spinner in field while fetching details
   setFieldState(which, 'checking');
   getInp(which).value = pred.structured_formatting
     ? pred.structured_formatting.main_text
     : pred.description;
-
   placesService.getDetails(
-    {
-      placeId: pred.place_id,
-      fields: ['geometry', 'formatted_address', 'name'],
-    },
+    { placeId: pred.place_id, fields: ['geometry', 'formatted_address', 'name'] },
     (place, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry) {
         const name = place.name || (pred.structured_formatting ? pred.structured_formatting.main_text : pred.description);
@@ -529,7 +498,6 @@ function pickSuggestion(e, which, idx) {
         setConfirmed(which, name, addr, lat, lng);
         toast('✅ ' + name + ' confirmed', 'ok');
       } else {
-        // Fallback: geocode the description text
         geocodeFallback(which, pred.description);
       }
       closeDrop(which);
@@ -537,9 +505,6 @@ function pickSuggestion(e, which, idx) {
   );
 }
 
-/* ─────────────────────────────────────────
-   GEOCODE FALLBACK (when getDetails fails)
-───────────────────────────────────────── */
 function geocodeFallback(which, address) {
   geocoder.geocode(
     { address: address, region: 'jm' },
@@ -559,13 +524,12 @@ function geocodeFallback(which, address) {
 }
 
 /* ─────────────────────────────────────────
-   KEYBOARD NAV IN DROPDOWN
+   KEYBOARD NAV
 ───────────────────────────────────────── */
 function onKey(e, which) {
   const st    = acState[which];
   const drop  = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
   const items = drop.querySelectorAll('.ac-item');
-
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     st.focusIdx = Math.min(st.focusIdx + 1, items.length - 1);
@@ -601,12 +565,10 @@ function showDrop(which, html) {
   drop.innerHTML = html;
   drop.classList.add('open');
 }
-
 function closeDrop(which) {
   const drop = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
   drop.classList.remove('open');
 }
-
 function escHtml(str) {
   return String(str)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -623,7 +585,7 @@ function setFieldState(which, state) {
   const f = getInp(which);
   const i = getIcon(which);
   f.className = 'od-field';
-  if (state === 'confirmed') { f.classList.add('confirmed'); i.textContent = '✅'; }
+  if (state === 'confirmed')     { f.classList.add('confirmed'); i.textContent = '✅'; }
   else if (state === 'error')    { f.classList.add('error');     i.textContent = '❌'; }
   else if (state === 'checking') { f.classList.add('checking');  i.textContent = '⏳'; }
   else { i.textContent = which === 'origin' ? '📍' : '🏢'; }
@@ -657,15 +619,11 @@ function closeBar() { document.getElementById('confirmBar').classList.remove('op
 
 function editField(which) {
   if (which === 'origin') {
-    cOrigin = null;
-    setFieldState('origin', 'neutral');
-    getInp('origin').value = '';
-    getInp('origin').focus();
+    cOrigin = null; setFieldState('origin', 'neutral');
+    getInp('origin').value = ''; getInp('origin').focus();
   } else {
-    cDest = null;
-    setFieldState('dest', 'neutral');
-    getInp('dest').value = '';
-    getInp('dest').focus();
+    cDest = null; setFieldState('dest', 'neutral');
+    getInp('dest').value = ''; getInp('dest').focus();
   }
   closeBar();
 }
@@ -674,31 +632,19 @@ function editField(which) {
    GO HANDLER
 ───────────────────────────────────────── */
 function handleGo() {
-  if (!cOrigin && !cDest) {
-    toast('👆 Type an address and pick a suggestion from the list');
-    return;
-  }
-  if (!cOrigin) {
-    toast('👆 Pick an origin from the dropdown first');
-    getInp('origin').focus();
-    return;
-  }
-  if (!cDest) {
-    toast('👆 Pick a destination from the dropdown first');
-    getInp('dest').focus();
-    return;
-  }
+  if (!cOrigin && !cDest) { toast('👆 Type an address and pick a suggestion from the list'); return; }
+  if (!cOrigin)            { toast('👆 Pick an origin from the dropdown first'); getInp('origin').focus(); return; }
+  if (!cDest)              { toast('👆 Pick a destination from the dropdown first'); getInp('dest').focus(); return; }
   runDir();
 }
 
 /* ─────────────────────────────────────────
-   RUN DIRECTIONS
+   DIRECTIONS
 ───────────────────────────────────────── */
 function runDir() {
   if (!cOrigin || !cDest) return;
   setStatus('loading', 'Calculating routes…');
   clearR();
-
   dirSvc.route({
     origin:      { lat: cOrigin.lat, lng: cOrigin.lng },
     destination: { lat: cDest.lat,   lng: cDest.lng   },
@@ -717,7 +663,7 @@ function runDir() {
       document.getElementById('liveLabel').textContent = 'Live traffic data';
     } else {
       setStatus('err', 'Route not found (' + st + ')');
-      toast('❌ No route found — check your locations are in Jamaica');
+      toast('❌ No route found — check locations are in Jamaica');
     }
   });
 }
@@ -733,8 +679,7 @@ function drawRoutes(res) {
   clearR();
   res.routes.forEach((_, i) => {
     const r = new google.maps.DirectionsRenderer({
-      map: gmap,
-      routeIndex: i,
+      map: gmap, routeIndex: i,
       suppressInfoWindows: true,
       suppressMarkers: i > 0,
       polylineOptions: {
@@ -750,7 +695,7 @@ function drawRoutes(res) {
 }
 
 /* ─────────────────────────────────────────
-   SIDEBAR — ROUTE CARDS
+   SIDEBAR ROUTE CARDS
 ───────────────────────────────────────── */
 function sidebar(routes) {
   const rows = routes.map((r, i) => {
@@ -810,7 +755,6 @@ function selRoute(idx) {
   document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
   const card = document.getElementById('rc' + idx);
   if (card) card.classList.add('selected');
-
   renderers.forEach((r, i) => r.setOptions({
     polylineOptions: {
       strokeColor:   COLORS[i % COLORS.length],
@@ -819,7 +763,6 @@ function selRoute(idx) {
       zIndex:        i === idx ? 10   : 1,
     },
   }));
-
   if (allRoutes[idx]) {
     const l    = allRoutes[idx].legs[0];
     const mins = Math.round((l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value) / 60);
@@ -836,42 +779,32 @@ function startNav(e, idx) {
   if (!allRoutes[idx]) return;
   const l = allRoutes[idx].legs[0];
   navSteps = l.steps; navMode = true; stepIdx = 0; selIdx = idx;
-
   document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === 1));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-navigate').classList.add('active');
-  document.getElementById('noNavMsg').style.display = 'none';
+  document.getElementById('noNavMsg').style.display    = 'none';
   document.getElementById('stepsContainer').style.display = 'block';
-
   const mins = Math.round((l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value) / 60);
   document.getElementById('navEta').textContent   = mins + ' min';
   document.getElementById('navRoute').textContent = 'via ' + (allRoutes[idx].summary || 'Route');
-
   renderSteps(navSteps);
   showBubble(0);
-
   gmap.setMapTypeId('roadmap');
   gmap.setZoom(16);
   gmap.setCenter({ lat: l.start_location.lat(), lng: l.start_location.lng() });
-
   if (navigator.geolocation) {
     watchId = navigator.geolocation.watchPosition(pos => {
       const ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       if (!userMk) {
         userMk = new google.maps.Marker({
           position: ll, map: gmap, zIndex: 999,
-          icon: {
-            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-            scale: 5, fillColor: '#3d9ef5', fillOpacity: 1,
-            strokeColor: '#fff', strokeWeight: 2,
-          },
+          icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 5, fillColor: '#3d9ef5', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
         });
       } else { userMk.setPosition(ll); }
       gmap.panTo(ll);
       advStep(ll);
     }, null, { enableHighAccuracy: true, maximumAge: 2000 });
   }
-
   document.getElementById('navBubble').classList.add('visible');
   document.getElementById('liveLabel').textContent = '▶ Navigation active';
 }
@@ -881,7 +814,7 @@ function stopNav() {
   if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
   if (userMk)  { userMk.setMap(null); userMk = null; }
   document.getElementById('navBubble').classList.remove('visible');
-  document.getElementById('noNavMsg').style.display = 'block';
+  document.getElementById('noNavMsg').style.display    = 'block';
   document.getElementById('stepsContainer').style.display = 'none';
   document.getElementById('liveLabel').textContent = 'Live traffic data';
 }
@@ -930,11 +863,9 @@ function turnIco(m) {
 }
 
 function hav(a, b, c, d) {
-  const R = 6371000;
-  const dl = (c - a) * Math.PI / 180;
-  const dg = (d - b) * Math.PI / 180;
-  const x  = Math.sin(dl / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(dg / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  const R = 6371000, dl = (c-a)*Math.PI/180, dg = (d-b)*Math.PI/180;
+  const x = Math.sin(dl/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dg/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
 }
 
 function strip(h) { const t = document.createElement('div'); t.innerHTML = h; return t.textContent; }
@@ -965,13 +896,11 @@ function goMyLoc() {
 }
 
 function swapLocations() {
-  const ov = getInp('origin').value;
-  const dv = getInp('dest').value;
-  getInp('origin').value = dv;
-  getInp('dest').value   = ov;
+  const ov = getInp('origin').value, dv = getInp('dest').value;
+  getInp('origin').value = dv; getInp('dest').value = ov;
   const tmp = cOrigin; cOrigin = cDest; cDest = tmp;
-  if (cOrigin) setFieldState('origin', 'confirmed'); else setFieldState('origin', 'neutral');
-  if (cDest)   setFieldState('dest',   'confirmed'); else setFieldState('dest',   'neutral');
+  if (cOrigin) setFieldState('origin','confirmed'); else setFieldState('origin','neutral');
+  if (cDest)   setFieldState('dest',  'confirmed'); else setFieldState('dest',  'neutral');
   closeBar();
   if (cOrigin && cDest) openBar();
 }
@@ -1025,38 +954,33 @@ function buildChart() {
   const bi   = slots.findIndex(s => s.c === minC);
   const wrap = document.getElementById('chartBars');
   wrap.innerHTML = '';
-
   slots.forEach((s, i) => {
     const p     = s.c / 90;
     const color = s.c < 30 ? '#1fdf72' : s.c < 58 ? '#f5a41f' : '#ef4343';
     const col   = document.createElement('div');
     col.className = 'bar-col';
     col.innerHTML = `
-      <div class="bar-inner${i === bi ? ' best' : ''}" style="height:${Math.max(p * 60, 3)}px;background:${color};opacity:${i === bi ? 1 : 0.55}">
+      <div class="bar-inner${i === bi ? ' best' : ''}" style="height:${Math.max(p*60,3)}px;background:${color};opacity:${i===bi?1:0.55}">
         ${i === bi ? '<span class="best-tag">best</span>' : ''}
       </div>
-      <div class="bar-lbl">${i % 4 === 0 ? fH(s.h) : ''}</div>`;
+      <div class="bar-lbl">${i%4===0?fH(s.h):''}</div>`;
     wrap.appendChild(col);
   });
-
   const fr = (nowH - base) / (18 * 0.25);
   const ln = document.getElementById('nowLine');
   if (fr >= 0 && fr <= 1) ln.style.left = (fr * 100).toFixed(1) + '%';
-
   const bh = slots[bi];
   document.getElementById('departBest').innerHTML =
     `Best window: <strong style="color:var(--green)">${fH(bh.h)} – ${fH(bh.h + 0.5)}</strong>`;
 }
 
 function fH(h) {
-  const hh = Math.floor(h) % 12 || 12;
-  const mm = h % 1 === 0 ? '00' : '30';
-  const ap = Math.floor(h) < 12 ? 'AM' : 'PM';
+  const hh = Math.floor(h)%12||12, mm = h%1===0?'00':'30', ap = Math.floor(h)<12?'AM':'PM';
   return `${hh}:${mm}${ap}`;
 }
 
 /* ─────────────────────────────────────────
-   INCIDENTS (static for Kingston)
+   INCIDENTS
 ───────────────────────────────────────── */
 function renderIncidents() {
   document.getElementById('incidentsList').innerHTML = `
@@ -1075,13 +999,13 @@ function darkStyle() {
     { elementType: 'geometry',            stylers: [{ color: '#0c1220' }] },
     { elementType: 'labels.text.stroke',  stylers: [{ color: '#0c1220' }] },
     { elementType: 'labels.text.fill',    stylers: [{ color: '#4a5a80' }] },
-    { featureType: 'road',                elementType: 'geometry',           stylers: [{ color: '#1c2540' }] },
-    { featureType: 'road',                elementType: 'labels.text.fill',   stylers: [{ color: '#7a87a8' }] },
-    { featureType: 'road.highway',        elementType: 'geometry',           stylers: [{ color: '#243055' }] },
-    { featureType: 'road.highway',        elementType: 'labels.text.fill',   stylers: [{ color: '#8899bb' }] },
-    { featureType: 'water',               elementType: 'geometry',           stylers: [{ color: '#080e1a' }] },
-    { featureType: 'poi.park',            elementType: 'geometry',           stylers: [{ color: '#0f1a28' }] },
-    { featureType: 'transit',             elementType: 'geometry',           stylers: [{ color: '#0f1520' }] },
+    { featureType: 'road',                elementType: 'geometry',         stylers: [{ color: '#1c2540' }] },
+    { featureType: 'road',                elementType: 'labels.text.fill', stylers: [{ color: '#7a87a8' }] },
+    { featureType: 'road.highway',        elementType: 'geometry',         stylers: [{ color: '#243055' }] },
+    { featureType: 'road.highway',        elementType: 'labels.text.fill', stylers: [{ color: '#8899bb' }] },
+    { featureType: 'water',               elementType: 'geometry',         stylers: [{ color: '#080e1a' }] },
+    { featureType: 'poi.park',            elementType: 'geometry',         stylers: [{ color: '#0f1a28' }] },
+    { featureType: 'transit',             elementType: 'geometry',         stylers: [{ color: '#0f1520' }] },
   ];
 }
 
@@ -1091,37 +1015,38 @@ function darkStyle() {
 setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
 </script>
 
-<!-- Load Google Maps with Places + Geometry libraries -->
+<!-- ═══════════════════════════════════════
+     GOOGLE MAPS LOADER — FIXED (no duplicate lines)
+════════════════════════════════════════ -->
 <script>
 (function () {
-  const k = GOOGLE_MAPS_KEY;
+  var k = GOOGLE_MAPS_KEY;
   if (!k || k === 'YOUR_KEY_HERE') {
     document.getElementById('statusBanner').className = 'status-banner demo';
-    document.getElementById('statusText').textContent = 'Demo mode — add your Google Maps API key';
-    setTimeout(() => { buildChart(); renderIncidents(); }, 100);
+    document.getElementById('statusText').textContent = '◈ Demo mode — add your Google Maps API key';
+    setTimeout(function() { buildChart(); renderIncidents(); }, 100);
     return;
   }
-  // Wrap the real initMap so it runs after the browser has painted layout
+
+  /* Wrap initMap so it fires after browser layout paint */
   window._initMapReal = window.initMap;
-  window.initMap = function() {
-    // requestAnimationFrame fires after paint — guarantees #googleMap has real dimensions
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+  window.initMap = function () {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
         window._initMapReal();
       });
     });
   };
-  const s = document.createElement('script');
-  s.src   = `https://maps.googleapis.com/maps/api/js?key=${k}&libraries=places,geometry&callback=initMap`;
+
+  var s = document.createElement('script');
+  s.src   = 'https://maps.googleapis.com/maps/api/js?key=' + k + '&libraries=places,geometry&callback=initMap';
   s.async = true;
   s.defer = true;
-  s.onerror = () => {
+  s.onerror = function () {
     document.getElementById('statusBanner').className = 'status-banner err';
-    document.getElementById('statusText').textContent = 'Failed to load Google Maps — check API key & billing';
+    document.getElementById('statusText').textContent = '✕ Failed to load Google Maps — check API key & billing';
   };
-  document.head.appendChild(s);
-})();
-  document.head.appendChild(s);
+  document.head.appendChild(s); /* ← only appears ONCE — this was the fatal bug */
 })();
 </script>
 </body>
