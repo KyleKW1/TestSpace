@@ -14,7 +14,13 @@
   --text:#dce5f7; --muted:#6b7a9b; --dim:#2e3a5a;
   --nav-h:60px;
 }
-html, body {
+
+/* ── ROOT: force full viewport, no scroll ── */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+body {
   height: 100%;
   overflow: hidden;
   background: var(--bg);
@@ -22,6 +28,7 @@ html, body {
   font-family: 'Syne', sans-serif;
 }
 
+/* ── APP shell: vertical flex column, exact viewport ── */
 .app {
   display: flex;
   flex-direction: column;
@@ -29,22 +36,97 @@ html, body {
   overflow: hidden;
 }
 
-.main {
+/* ── TOP NAV: fixed height, never shrinks ── */
+.topnav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   display: flex;
-  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  position: relative;
+  z-index: 200;
+  height: var(--nav-h);
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+/* ── CONFIRM BAR: collapses to 0, never shrinks layout ── */
+.confirm-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.35s ease;
+  z-index: 150;
+  position: relative;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+.confirm-bar.open { max-height: 110px; }
+
+/* ── MAIN: takes ALL remaining space ── */
+.main {
+  flex: 1 1 0;       /* grow to fill, shrink if needed, base=0 */
+  min-height: 0;     /* CRITICAL — allows flex child to shrink below content size */
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  flex-shrink: 0;
   min-height: 0;
-  height: 0; /* FIXED: forces flex children to fill correctly */
+  overflow: hidden;
 }
 
-@media(max-width:768px) {
+/* ── MAP WRAPPER: fills all remaining horizontal space ── */
+.map-wrap {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #0c1220;
+}
+
+/* ── THE KEY FIX: use position:absolute so the div always has
+   concrete pixel dimensions when Google Maps measures it.
+   Flex children with height:100% can report 0px in some
+   browser/timing combos; absolute+inset:0 never does.     ── */
+#googleMap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
   .main { flex-direction: column; }
-  .sidebar { order: 2; max-height: 45vh; flex-shrink: 0; }
-  .map-wrap { order: 1; }
+  .sidebar {
+    order: 2;
+    width: 100%;
+    height: 45vh;
+    flex-shrink: 0;
+    flex-grow: 0;
+  }
+  .map-wrap {
+    order: 1;
+    flex: 1 1 0;
+    min-height: 0;
+  }
 }
 
-/* TOP NAV */
-.topnav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 14px;position:relative;z-index:200;height:var(--nav-h);flex-shrink:0;}
+/* ── rest of styles unchanged ── */
 .logo{font-size:17px;font-weight:800;letter-spacing:-0.5px;flex-shrink:0;}
 .logo em{color:var(--green);font-style:normal;}
 .od-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
@@ -61,8 +143,6 @@ html, body {
 .go-top{background:var(--green);color:#050810;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;flex-shrink:0;transition:opacity 0.2s;letter-spacing:0.3px;}
 .go-top:hover{opacity:0.85;}
 #clock{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;}
-
-/* AUTOCOMPLETE DROPDOWN */
 .ac-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1.5px solid var(--border2);border-radius:10px;z-index:9999;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.5);display:none;}
 .ac-dropdown.open{display:block;}
 .ac-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;}
@@ -74,10 +154,6 @@ html, body {
 .ac-sub{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
 .ac-loading{padding:12px;text-align:center;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
 .ac-empty{padding:12px;text-align:center;font-size:11px;color:var(--red);font-family:'DM Mono',monospace;}
-
-/* CONFIRM BAR */
-.confirm-bar{background:var(--surface);border-bottom:1px solid var(--border);overflow:hidden;max-height:0;transition:max-height 0.35s ease;z-index:150;position:relative;flex-shrink:0;}
-.confirm-bar.open{max-height:110px;}
 .confirm-inner{display:flex;}
 .place-card{flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;border-right:1px solid var(--border);position:relative;min-width:0;}
 .place-card:last-child{border-right:none;}
@@ -90,22 +166,15 @@ html, body {
 .pc-check{flex-shrink:0;font-size:16px;}
 .pc-edit{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:5px;padding:2px 7px;cursor:pointer;transition:all 0.2s;font-family:'Syne',sans-serif;}
 .pc-edit:hover{border-color:var(--blue);color:var(--blue);}
-
-/* TOAST */
 .toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(239,67,67,0.96);color:#fff;border-radius:8px;padding:9px 16px;font-size:12px;font-family:'DM Mono',monospace;z-index:9999;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.ok{background:rgba(31,223,114,0.96);color:#050810;}
-
-/* SIDEBAR */
-.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;min-height:0;height:100%;width:360px;flex-shrink:0;}
 .sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
 .tab-btn{flex:1;padding:10px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;font-family:'Syne',sans-serif;}
 .tab-btn.active{color:var(--green);border-bottom-color:var(--green);}
 .tab-pane{display:none;flex:1;overflow-y:auto;padding:14px;}
 .tab-pane.active{display:flex;flex-direction:column;gap:12px;}
 .section-label{font-size:9px;font-weight:700;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
-
-/* STATUS */
 .status-banner{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:11px;font-family:'DM Mono',monospace;}
 .status-banner.loading{background:rgba(61,158,245,0.07);color:var(--blue);border:1px solid rgba(61,158,245,0.18);}
 .status-banner.live{background:rgba(31,223,114,0.07);color:var(--green);border:1px solid rgba(31,223,114,0.18);}
@@ -113,8 +182,6 @@ html, body {
 .status-banner.err{background:rgba(239,67,67,0.07);color:var(--red);border:1px solid rgba(239,67,67,0.18);}
 .spin{display:inline-block;animation:spin 1s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* ROUTE CARDS */
 .route-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px;cursor:pointer;transition:all 0.18s;position:relative;overflow:hidden;margin-bottom:8px;}
 .route-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
 .route-card.r0::before{background:var(--green);}
@@ -137,8 +204,6 @@ html, body {
 .nav-start{display:none;width:100%;margin-top:10px;padding:8px;border-radius:7px;border:none;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;background:var(--green);color:#050810;transition:opacity 0.2s;}
 .route-card.selected .nav-start{display:block;}
 .nav-start:hover{opacity:0.85;}
-
-/* STEPS */
 .nav-header{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px;text-align:center;}
 .nav-eta-big{font-size:30px;font-weight:800;font-family:'DM Mono',monospace;color:var(--green);line-height:1;}
 .nav-sub{font-size:11px;color:var(--muted);margin-top:4px;}
@@ -151,8 +216,6 @@ html, body {
 .step-text{font-size:12px;line-height:1.5;color:var(--muted);flex:1;}
 .step-text strong{color:var(--text);font-weight:600;}
 .step-dist{font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;margin-top:2px;}
-
-/* CHART */
 .depart-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px;}
 .chart-wrap{position:relative;height:90px;margin-top:10px;}
 .chart-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
@@ -163,34 +226,11 @@ html, body {
 .bar-lbl{font-size:8px;color:var(--dim);font-family:'DM Mono',monospace;}
 .now-line{position:absolute;top:0;bottom:20px;width:1.5px;background:var(--blue);pointer-events:none;}
 .now-lbl{position:absolute;top:-14px;font-size:8px;color:var(--blue);transform:translateX(-50%);font-family:'DM Mono',monospace;}
-
-/* INCIDENTS */
 .inc-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
 .inc-item:last-child{border:none;}
 .inc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
 .inc-body{font-size:12px;line-height:1.5;color:var(--muted);}
 .inc-body strong{color:var(--text);}
-
-/* MAP — FIXED HEIGHT CHAIN */
-.map-wrap {
-  position: relative;
-  overflow: hidden;
-  background: #0c1220;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  height: 100%; /* FIXED */
-  display: flex;
-  flex-direction: column;
-}
-
-#googleMap {
-  width: 100%;
-  flex: 1;
-  min-height: 0; /* FIXED: was 300px which breaks flex */
-  height: 100%;  /* FIXED */
-}
-
 .map-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:10;}
 .mc-btn{background:rgba(9,12,19,0.88);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;color:var(--muted);cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;white-space:nowrap;}
 .mc-btn:hover{border-color:var(--muted);color:var(--text);}
@@ -359,101 +399,69 @@ html, body {
 </div>
 
 <script>
-/* ─────────────────────────────────────────
-   CONFIG
-───────────────────────────────────────── */
+/* ── CONFIG ── */
 const GOOGLE_MAPS_KEY = "AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA";
-
 const KINGSTON_CENTER = { lat: 17.9970, lng: -76.7936 };
 const REFRESH_MS = 90000;
 const COLORS = ['#1fdf72','#f5a41f','#ef4343','#9b6dff'];
 
-/* ─────────────────────────────────────────
-   STATE
-───────────────────────────────────────── */
+/* ── STATE ── */
 let gmap, dirSvc, placesService, autoSvc, geocoder, trafficLayer;
 let renderers = [], allRoutes = [], selIdx = 0;
 let navSteps = [], navMode = false, stepIdx = 0;
 let watchId = null, userMk = null, trafficOn = true;
 let cOrigin = null, cDest = null;
-
 const acState = {
   origin: { timer: null, focusIdx: -1, suggestions: [] },
   dest:   { timer: null, focusIdx: -1, suggestions: [] },
 };
 
-/* ─────────────────────────────────────────
-   CLOCK
-───────────────────────────────────────── */
+/* ── CLOCK ── */
 const tick = () => {
   document.getElementById('clock').textContent =
     new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 };
 setInterval(tick, 1000); tick();
 
-/* ─────────────────────────────────────────
-   MAP INIT — FIXED
-───────────────────────────────────────── */
+/* ── MAP INIT ──
+   #googleMap is position:absolute+inset:0, so it always has real pixel
+   dimensions. We still fire one resize event after 300ms as a safety net.
+*/
 function initMap() {
   const mapEl = document.getElementById('googleMap');
-
   gmap = new google.maps.Map(mapEl, {
     center: KINGSTON_CENTER,
     zoom: 13,
-    mapTypeId: 'hybrid', // Satellite imagery + road labels
+    mapTypeId: 'hybrid',
     disableDefaultUI: true,
     zoomControl: true,
     fullscreenControl: true,
     gestureHandling: 'greedy',
   });
-
   dirSvc       = new google.maps.DirectionsService();
   geocoder     = new google.maps.Geocoder();
   trafficLayer = new google.maps.TrafficLayer();
   trafficLayer.setMap(gmap);
-
   placesService = new google.maps.places.PlacesService(mapEl);
   autoSvc       = new google.maps.places.AutocompleteService();
-
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#originWrap')) closeDrop('origin');
     if (!e.target.closest('#destWrap'))   closeDrop('dest');
   });
-
   buildChart();
   renderIncidents();
-
-  /* Multiple resize triggers to handle flex layout settling */
-  function triggerResize() {
+  // Safety-net resize after layout fully settles
+  setTimeout(() => {
     google.maps.event.trigger(gmap, 'resize');
     gmap.setCenter(KINGSTON_CENTER);
-  }
-
-  // Use ResizeObserver to fire once element has real dimensions
-  const ro = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-        triggerResize();
-        ro.disconnect();
-      }
-    }
-  });
-  ro.observe(mapEl);
-
-  // Belt-and-suspenders fallback timers
-  setTimeout(triggerResize, 100);
-  setTimeout(triggerResize, 500);
-  setTimeout(triggerResize, 1500);
+  }, 300);
 }
 
-/* ─────────────────────────────────────────
-   AUTOCOMPLETE
-───────────────────────────────────────── */
+/* ── AUTOCOMPLETE ── */
 function onFocus(which) {
   const inp = getInp(which);
   if (inp.classList.contains('confirmed')) inp.select();
 }
-
 function onInput(e, which) {
   const val = e.target.value.trim();
   if (which === 'origin') { cOrigin = null; setFieldState('origin', 'neutral'); }
@@ -465,41 +473,33 @@ function onInput(e, which) {
   showDrop(which, '<div class="ac-loading"><span class="spin">◌</span> Searching…</div>');
   st.timer = setTimeout(() => fetchSuggestions(which, val), 350);
 }
-
 function fetchSuggestions(which, input) {
   if (!autoSvc) return;
   const kingstonLatLng = new google.maps.LatLng(17.9970, -76.7936);
-  const jmOpts = {
-    input,
-    componentRestrictions: { country: 'jm' },
-    location: kingstonLatLng,
-    radius: 80000,
-  };
-  autoSvc.getPlacePredictions(jmOpts, (predictions, status) => {
-    if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
-      renderSuggestions(which, predictions);
-    } else {
-      const fallbackOpts = {
-        input: input + ' Jamaica',
-        location: kingstonLatLng,
-        radius: 100000,
-      };
-      autoSvc.getPlacePredictions(fallbackOpts, (p2, s2) => {
-        if (s2 === google.maps.places.PlacesServiceStatus.OK && p2 && p2.length > 0) {
-          renderSuggestions(which, p2);
-        } else {
-          acState[which].suggestions = [];
-          showDrop(which, '<div class="ac-empty">No results — try e.g. "Half Way Tree, Kingston"</div>');
-        }
-      });
+  autoSvc.getPlacePredictions(
+    { input, componentRestrictions: { country: 'jm' }, location: kingstonLatLng, radius: 80000 },
+    (predictions, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
+        renderSuggestions(which, predictions);
+      } else {
+        autoSvc.getPlacePredictions(
+          { input: input + ' Jamaica', location: kingstonLatLng, radius: 100000 },
+          (p2, s2) => {
+            if (s2 === google.maps.places.PlacesServiceStatus.OK && p2 && p2.length > 0) {
+              renderSuggestions(which, p2);
+            } else {
+              acState[which].suggestions = [];
+              showDrop(which, '<div class="ac-empty">No results — try e.g. "Half Way Tree, Kingston"</div>');
+            }
+          }
+        );
+      }
     }
-  });
+  );
 }
-
 function renderSuggestions(which, predictions) {
   const st = acState[which];
-  st.suggestions = predictions;
-  st.focusIdx = -1;
+  st.suggestions = predictions; st.focusIdx = -1;
   const html = predictions.slice(0, 6).map((p, i) => {
     const main = p.structured_formatting ? p.structured_formatting.main_text : p.description;
     const sec  = p.structured_formatting ? (p.structured_formatting.secondary_text || '') : '';
@@ -513,25 +513,20 @@ function renderSuggestions(which, predictions) {
   }).join('');
   showDrop(which, html);
 }
-
 function pickSuggestion(e, which, idx) {
   e.preventDefault();
   const pred = acState[which].suggestions[idx];
   if (!pred) return;
   setFieldState(which, 'checking');
-  getInp(which).value = pred.structured_formatting
-    ? pred.structured_formatting.main_text
-    : pred.description;
+  getInp(which).value = pred.structured_formatting ? pred.structured_formatting.main_text : pred.description;
   placesService.getDetails(
     { placeId: pred.place_id, fields: ['geometry', 'formatted_address', 'name'] },
     (place, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry) {
-        const name = place.name || (pred.structured_formatting ? pred.structured_formatting.main_text : pred.description);
-        const addr = place.formatted_address || pred.description;
-        const lat  = place.geometry.location.lat();
-        const lng  = place.geometry.location.lng();
-        setConfirmed(which, name, addr, lat, lng);
-        toast('✅ ' + name + ' confirmed', 'ok');
+        setConfirmed(which, place.name || pred.structured_formatting?.main_text || pred.description,
+          place.formatted_address || pred.description,
+          place.geometry.location.lat(), place.geometry.location.lng());
+        toast('✅ ' + (place.name || 'Location') + ' confirmed', 'ok');
       } else {
         geocodeFallback(which, pred.description);
       }
@@ -539,487 +534,337 @@ function pickSuggestion(e, which, idx) {
     }
   );
 }
-
 function geocodeFallback(which, address) {
-  geocoder.geocode(
-    { address: address, region: 'jm' },
-    (results, status) => {
-      if (status === 'OK' && results[0]) {
-        const r   = results[0];
-        const lat = r.geometry.location.lat();
-        const lng = r.geometry.location.lng();
-        setConfirmed(which, r.formatted_address.split(',')[0], r.formatted_address, lat, lng);
-        toast('✅ Location confirmed', 'ok');
-      } else {
-        setFieldState(which, 'error');
-        toast('❌ Could not resolve location — try a more specific address');
-      }
+  geocoder.geocode({ address, region: 'jm' }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      const r = results[0];
+      setConfirmed(which, r.formatted_address.split(',')[0], r.formatted_address,
+        r.geometry.location.lat(), r.geometry.location.lng());
+      toast('✅ Location confirmed', 'ok');
+    } else {
+      setFieldState(which, 'error');
+      toast('❌ Could not resolve location — try a more specific address');
     }
-  );
+  });
 }
 
-/* ─────────────────────────────────────────
-   KEYBOARD NAV
-───────────────────────────────────────── */
+/* ── KEYBOARD NAV ── */
 function onKey(e, which) {
-  const st    = acState[which];
-  const drop  = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
-  const items = drop.querySelectorAll('.ac-item');
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    st.focusIdx = Math.min(st.focusIdx + 1, items.length - 1);
-    highlightItem(items, st.focusIdx);
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    st.focusIdx = Math.max(st.focusIdx - 1, 0);
-    highlightItem(items, st.focusIdx);
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    if (st.focusIdx >= 0 && items[st.focusIdx]) {
-      items[st.focusIdx].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    } else if (drop.classList.contains('open') && items.length === 1) {
-      items[0].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    } else if (!drop.classList.contains('open')) {
-      handleGo();
-    }
-  } else if (e.key === 'Escape') {
-    closeDrop(which);
-  }
-}
-
-function highlightItem(items, idx) {
-  items.forEach((el, i) => el.classList.toggle('focused', i === idx));
-  if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
-}
-
-/* ─────────────────────────────────────────
-   DROPDOWN HELPERS
-───────────────────────────────────────── */
-function showDrop(which, html) {
+  const st = acState[which];
   const drop = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
-  drop.innerHTML = html;
-  drop.classList.add('open');
+  const items = drop.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); st.focusIdx = Math.min(st.focusIdx+1,items.length-1); highlightItem(items,st.focusIdx); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); st.focusIdx = Math.max(st.focusIdx-1,0); highlightItem(items,st.focusIdx); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (st.focusIdx >= 0 && items[st.focusIdx]) items[st.focusIdx].dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));
+    else if (drop.classList.contains('open') && items.length === 1) items[0].dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));
+    else if (!drop.classList.contains('open')) handleGo();
+  } else if (e.key === 'Escape') closeDrop(which);
+}
+function highlightItem(items, idx) {
+  items.forEach((el,i) => el.classList.toggle('focused', i===idx));
+  if (items[idx]) items[idx].scrollIntoView({block:'nearest'});
+}
+
+/* ── DROPDOWN HELPERS ── */
+function showDrop(which, html) {
+  const drop = document.getElementById(which==='origin'?'originDrop':'destDrop');
+  drop.innerHTML = html; drop.classList.add('open');
 }
 function closeDrop(which) {
-  const drop = document.getElementById(which === 'origin' ? 'originDrop' : 'destDrop');
-  drop.classList.remove('open');
+  document.getElementById(which==='origin'?'originDrop':'destDrop').classList.remove('open');
 }
 function escHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ─────────────────────────────────────────
-   FIELD STATE HELPERS
-───────────────────────────────────────── */
-function getInp(which)  { return document.getElementById(which === 'origin' ? 'originInput' : 'destInput'); }
-function getIcon(which) { return document.getElementById(which === 'origin' ? 'originIcon'  : 'destIcon');  }
-
+/* ── FIELD STATE ── */
+function getInp(w)  { return document.getElementById(w==='origin'?'originInput':'destInput'); }
+function getIcon(w) { return document.getElementById(w==='origin'?'originIcon':'destIcon'); }
 function setFieldState(which, state) {
-  const f = getInp(which);
-  const i = getIcon(which);
-  f.className = 'od-field';
-  if (state === 'confirmed')     { f.classList.add('confirmed'); i.textContent = '✅'; }
-  else if (state === 'error')    { f.classList.add('error');     i.textContent = '❌'; }
-  else if (state === 'checking') { f.classList.add('checking');  i.textContent = '⏳'; }
-  else { i.textContent = which === 'origin' ? '📍' : '🏢'; }
+  const f=getInp(which), i=getIcon(which);
+  f.className='od-field';
+  if (state==='confirmed')     { f.classList.add('confirmed'); i.textContent='✅'; }
+  else if (state==='error')    { f.classList.add('error');     i.textContent='❌'; }
+  else if (state==='checking') { f.classList.add('checking');  i.textContent='⏳'; }
+  else { i.textContent = which==='origin'?'📍':'🏢'; }
 }
 
-/* ─────────────────────────────────────────
-   CONFIRM A PLACE
-───────────────────────────────────────── */
+/* ── CONFIRM A PLACE ── */
 function setConfirmed(which, name, addr, lat, lng) {
   const obj = { name, addr, lat, lng };
-  if (which === 'origin') {
-    cOrigin = obj;
-    setFieldState('origin', 'confirmed');
-    getInp('origin').value = name;
-    document.getElementById('oName').textContent   = name;
-    document.getElementById('oAddr').textContent   = addr || name;
-    document.getElementById('oCoords').textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+  if (which==='origin') {
+    cOrigin=obj; setFieldState('origin','confirmed'); getInp('origin').value=name;
+    document.getElementById('oName').textContent=name;
+    document.getElementById('oAddr').textContent=addr||name;
+    document.getElementById('oCoords').textContent=lat.toFixed(5)+', '+lng.toFixed(5);
   } else {
-    cDest = obj;
-    setFieldState('dest', 'confirmed');
-    getInp('dest').value = name;
-    document.getElementById('dName').textContent   = name;
-    document.getElementById('dAddr').textContent   = addr || name;
-    document.getElementById('dCoords').textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+    cDest=obj; setFieldState('dest','confirmed'); getInp('dest').value=name;
+    document.getElementById('dName').textContent=name;
+    document.getElementById('dAddr').textContent=addr||name;
+    document.getElementById('dCoords').textContent=lat.toFixed(5)+', '+lng.toFixed(5);
   }
   if (cOrigin && cDest) openBar();
 }
-
 function openBar()  { document.getElementById('confirmBar').classList.add('open'); }
 function closeBar() { document.getElementById('confirmBar').classList.remove('open'); }
-
 function editField(which) {
-  if (which === 'origin') {
-    cOrigin = null; setFieldState('origin', 'neutral');
-    getInp('origin').value = ''; getInp('origin').focus();
-  } else {
-    cDest = null; setFieldState('dest', 'neutral');
-    getInp('dest').value = ''; getInp('dest').focus();
-  }
+  if (which==='origin') { cOrigin=null; setFieldState('origin','neutral'); getInp('origin').value=''; getInp('origin').focus(); }
+  else { cDest=null; setFieldState('dest','neutral'); getInp('dest').value=''; getInp('dest').focus(); }
   closeBar();
 }
 
-/* ─────────────────────────────────────────
-   GO HANDLER
-───────────────────────────────────────── */
+/* ── GO ── */
 function handleGo() {
   if (!cOrigin && !cDest) { toast('👆 Type an address and pick a suggestion from the list'); return; }
-  if (!cOrigin)            { toast('👆 Pick an origin from the dropdown first'); getInp('origin').focus(); return; }
-  if (!cDest)              { toast('👆 Pick a destination from the dropdown first'); getInp('dest').focus(); return; }
+  if (!cOrigin) { toast('👆 Pick an origin from the dropdown first'); getInp('origin').focus(); return; }
+  if (!cDest)   { toast('👆 Pick a destination from the dropdown first'); getInp('dest').focus(); return; }
   runDir();
 }
 
-/* ─────────────────────────────────────────
-   DIRECTIONS
-───────────────────────────────────────── */
+/* ── DIRECTIONS ── */
 function runDir() {
   if (!cOrigin || !cDest) return;
-  setStatus('loading', 'Calculating routes…');
+  setStatus('loading','Calculating routes…');
   clearR();
   dirSvc.route({
-    origin:      { lat: cOrigin.lat, lng: cOrigin.lng },
-    destination: { lat: cDest.lat,   lng: cDest.lng   },
-    travelMode:  google.maps.TravelMode.DRIVING,
+    origin: { lat:cOrigin.lat, lng:cOrigin.lng },
+    destination: { lat:cDest.lat, lng:cDest.lng },
+    travelMode: google.maps.TravelMode.DRIVING,
     provideRouteAlternatives: true,
-    drivingOptions: {
-      departureTime: new Date(),
-      trafficModel:  google.maps.TrafficModel.BEST_GUESS,
-    },
+    drivingOptions: { departureTime:new Date(), trafficModel:google.maps.TrafficModel.BEST_GUESS },
   }, (res, st) => {
-    if (st === 'OK') {
-      allRoutes = res.routes;
-      drawRoutes(res);
-      sidebar(res.routes);
-      setStatus('live', 'Live · ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }));
-      document.getElementById('liveLabel').textContent = 'Live traffic data';
+    if (st==='OK') {
+      allRoutes=res.routes; drawRoutes(res); sidebar(res.routes);
+      setStatus('live','Live · '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+      document.getElementById('liveLabel').textContent='Live traffic data';
     } else {
-      setStatus('err', 'Route not found (' + st + ')');
+      setStatus('err','Route not found ('+st+')');
       toast('❌ No route found — check locations are in Jamaica');
     }
   });
 }
-
 function rerun() { if (cOrigin && cDest) runDir(); }
 
-/* ─────────────────────────────────────────
-   DRAW ROUTES
-───────────────────────────────────────── */
-function clearR() { renderers.forEach(r => r.setMap(null)); renderers = []; }
-
+/* ── DRAW ROUTES ── */
+function clearR() { renderers.forEach(r=>r.setMap(null)); renderers=[]; }
 function drawRoutes(res) {
   clearR();
-  res.routes.forEach((_, i) => {
+  res.routes.forEach((_,i) => {
     const r = new google.maps.DirectionsRenderer({
-      map: gmap, routeIndex: i,
-      suppressInfoWindows: true,
-      suppressMarkers: i > 0,
-      polylineOptions: {
-        strokeColor:   COLORS[i % COLORS.length],
-        strokeOpacity: i === selIdx ? 0.95 : 0.28,
-        strokeWeight:  i === selIdx ? 7    : 3,
-        zIndex:        i === selIdx ? 10   : 1,
-      },
+      map:gmap, routeIndex:i, suppressInfoWindows:true, suppressMarkers:i>0,
+      polylineOptions:{ strokeColor:COLORS[i%COLORS.length], strokeOpacity:i===selIdx?0.95:0.28, strokeWeight:i===selIdx?7:3, zIndex:i===selIdx?10:1 },
     });
-    r.setDirections(res);
-    renderers.push(r);
+    r.setDirections(res); renderers.push(r);
   });
 }
 
-/* ─────────────────────────────────────────
-   SIDEBAR ROUTE CARDS
-───────────────────────────────────────── */
+/* ── SIDEBAR ── */
 function sidebar(routes) {
-  const rows = routes.map((r, i) => {
-    const l    = r.legs[0];
-    const tSec = l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value;
-    const cong = Math.max(0, Math.min(99, Math.round((tSec / l.duration.value - 1) * 100)));
-    return { i, name: r.summary || 'Route ' + (i + 1), eta: Math.round(tSec / 60), dist: (l.distance.value / 1000).toFixed(1), cong, leg: l };
-  }).sort((a, b) => a.eta - b.eta);
-
-  const bc = ['badge-g','badge-a','badge-r'];
-  const lb = ['BEST','MODERATE','SLOWER'];
-  const gr = [
-    'linear-gradient(90deg,#0fa84e,#1fdf72)',
-    'linear-gradient(90deg,#c4831a,#f5a41f)',
-    'linear-gradient(90deg,#b53030,#ef4343)',
-  ];
-  const ec = ['var(--green)','var(--amber)','var(--red)'];
-
-  document.getElementById('routeList').innerHTML = rows.map((r, rank) => `
-    <div class="route-card r${rank} ${r.i === selIdx ? 'selected' : ''}" id="rc${r.i}" onclick="selRoute(${r.i})">
+  const rows = routes.map((r,i) => {
+    const l=r.legs[0], tSec=l.duration_in_traffic?l.duration_in_traffic.value:l.duration.value;
+    const cong=Math.max(0,Math.min(99,Math.round((tSec/l.duration.value-1)*100)));
+    return {i,name:r.summary||'Route '+(i+1),eta:Math.round(tSec/60),dist:(l.distance.value/1000).toFixed(1),cong,leg:l};
+  }).sort((a,b)=>a.eta-b.eta);
+  const bc=['badge-g','badge-a','badge-r'], lb=['BEST','MODERATE','SLOWER'];
+  const gr=['linear-gradient(90deg,#0fa84e,#1fdf72)','linear-gradient(90deg,#c4831a,#f5a41f)','linear-gradient(90deg,#b53030,#ef4343)'];
+  const ec=['var(--green)','var(--amber)','var(--red)'];
+  document.getElementById('routeList').innerHTML = rows.map((r,rank) => `
+    <div class="route-card r${rank} ${r.i===selIdx?'selected':''}" id="rc${r.i}" onclick="selRoute(${r.i})">
       <div class="route-header">
         <div class="route-name">Via ${escHtml(r.name)}</div>
-        <div class="route-badge ${bc[rank] || 'badge-r'}">${lb[rank] || 'ALT'}</div>
+        <div class="route-badge ${bc[rank]||'badge-r'}">${lb[rank]||'ALT'}</div>
       </div>
       <div class="route-stats">
-        <div class="stat">
-          <div class="stat-val" style="color:${ec[rank]}">${r.eta}<span style="font-size:11px;font-weight:400">m</span></div>
-          <div class="stat-key">ETA</div>
-        </div>
-        <div class="stat">
-          <div class="stat-val">${r.dist}<span style="font-size:11px;font-weight:400">km</span></div>
-          <div class="stat-key">Dist</div>
-        </div>
-        <div class="stat">
-          <div class="stat-val" style="color:${ec[rank]}">${r.cong}%</div>
-          <div class="stat-key">Traffic</div>
-        </div>
+        <div class="stat"><div class="stat-val" style="color:${ec[rank]}">${r.eta}<span style="font-size:11px;font-weight:400">m</span></div><div class="stat-key">ETA</div></div>
+        <div class="stat"><div class="stat-val">${r.dist}<span style="font-size:11px;font-weight:400">km</span></div><div class="stat-key">Dist</div></div>
+        <div class="stat"><div class="stat-val" style="color:${ec[rank]}">${r.cong}%</div><div class="stat-key">Traffic</div></div>
       </div>
-      <div class="traffic-bar">
-        <div class="traffic-fill" style="width:${r.cong}%;background:${gr[rank] || gr[2]}"></div>
-      </div>
+      <div class="traffic-bar"><div class="traffic-fill" style="width:${r.cong}%;background:${gr[rank]||gr[2]}"></div></div>
       <button class="nav-start" onclick="startNav(event,${r.i})">▶ START NAVIGATION</button>
-    </div>
-  `).join('');
-
+    </div>`).join('');
   if (rows.length) {
-    document.getElementById('etaVal').innerHTML = rows[0].eta + '<span style="font-size:13px;font-weight:400">m</span>';
-    document.getElementById('etaSub').textContent = 'via ' + rows[0].name;
+    document.getElementById('etaVal').innerHTML=rows[0].eta+'<span style="font-size:13px;font-weight:400">m</span>';
+    document.getElementById('etaSub').textContent='via '+rows[0].name;
   }
 }
 
-/* ─────────────────────────────────────────
-   SELECT ROUTE
-───────────────────────────────────────── */
+/* ── SELECT ROUTE ── */
 function selRoute(idx) {
-  selIdx = idx;
-  document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
-  const card = document.getElementById('rc' + idx);
+  selIdx=idx;
+  document.querySelectorAll('.route-card').forEach(c=>c.classList.remove('selected'));
+  const card=document.getElementById('rc'+idx);
   if (card) card.classList.add('selected');
-  renderers.forEach((r, i) => r.setOptions({
-    polylineOptions: {
-      strokeColor:   COLORS[i % COLORS.length],
-      strokeOpacity: i === idx ? 0.95 : 0.25,
-      strokeWeight:  i === idx ? 7    : 3,
-      zIndex:        i === idx ? 10   : 1,
-    },
-  }));
+  renderers.forEach((r,i)=>r.setOptions({polylineOptions:{strokeColor:COLORS[i%COLORS.length],strokeOpacity:i===idx?0.95:0.25,strokeWeight:i===idx?7:3,zIndex:i===idx?10:1}}));
   if (allRoutes[idx]) {
-    const l    = allRoutes[idx].legs[0];
-    const mins = Math.round((l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value) / 60);
-    document.getElementById('etaVal').innerHTML  = mins + '<span style="font-size:13px;font-weight:400">m</span>';
-    document.getElementById('etaSub').textContent = 'via ' + (allRoutes[idx].summary || 'Route ' + (idx + 1));
+    const l=allRoutes[idx].legs[0], mins=Math.round((l.duration_in_traffic?l.duration_in_traffic.value:l.duration.value)/60);
+    document.getElementById('etaVal').innerHTML=mins+'<span style="font-size:13px;font-weight:400">m</span>';
+    document.getElementById('etaSub').textContent='via '+(allRoutes[idx].summary||'Route '+(idx+1));
   }
 }
 
-/* ─────────────────────────────────────────
-   NAVIGATION
-───────────────────────────────────────── */
+/* ── NAVIGATION ── */
 function startNav(e, idx) {
   e.stopPropagation();
   if (!allRoutes[idx]) return;
-  const l = allRoutes[idx].legs[0];
-  navSteps = l.steps; navMode = true; stepIdx = 0; selIdx = idx;
-  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === 1));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const l=allRoutes[idx].legs[0];
+  navSteps=l.steps; navMode=true; stepIdx=0; selIdx=idx;
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===1));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-navigate').classList.add('active');
-  document.getElementById('noNavMsg').style.display    = 'none';
-  document.getElementById('stepsContainer').style.display = 'block';
-  const mins = Math.round((l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value) / 60);
-  document.getElementById('navEta').textContent   = mins + ' min';
-  document.getElementById('navRoute').textContent = 'via ' + (allRoutes[idx].summary || 'Route');
-  renderSteps(navSteps);
-  showBubble(0);
-  gmap.setMapTypeId('hybrid');
-  gmap.setZoom(16);
-  gmap.setCenter({ lat: l.start_location.lat(), lng: l.start_location.lng() });
+  document.getElementById('noNavMsg').style.display='none';
+  document.getElementById('stepsContainer').style.display='block';
+  const mins=Math.round((l.duration_in_traffic?l.duration_in_traffic.value:l.duration.value)/60);
+  document.getElementById('navEta').textContent=mins+' min';
+  document.getElementById('navRoute').textContent='via '+(allRoutes[idx].summary||'Route');
+  renderSteps(navSteps); showBubble(0);
+  gmap.setMapTypeId('hybrid'); gmap.setZoom(16);
+  gmap.setCenter({lat:l.start_location.lat(),lng:l.start_location.lng()});
   if (navigator.geolocation) {
-    watchId = navigator.geolocation.watchPosition(pos => {
-      const ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    watchId=navigator.geolocation.watchPosition(pos=>{
+      const ll={lat:pos.coords.latitude,lng:pos.coords.longitude};
       if (!userMk) {
-        userMk = new google.maps.Marker({
-          position: ll, map: gmap, zIndex: 999,
-          icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 5, fillColor: '#3d9ef5', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
-        });
+        userMk=new google.maps.Marker({position:ll,map:gmap,zIndex:999,
+          icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:5,fillColor:'#3d9ef5',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}});
       } else { userMk.setPosition(ll); }
-      gmap.panTo(ll);
-      advStep(ll);
-    }, null, { enableHighAccuracy: true, maximumAge: 2000 });
+      gmap.panTo(ll); advStep(ll);
+    },null,{enableHighAccuracy:true,maximumAge:2000});
   }
   document.getElementById('navBubble').classList.add('visible');
-  document.getElementById('liveLabel').textContent = '▶ Navigation active';
+  document.getElementById('liveLabel').textContent='▶ Navigation active';
 }
-
 function stopNav() {
-  navMode = false;
-  if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-  if (userMk)  { userMk.setMap(null); userMk = null; }
+  navMode=false;
+  if (watchId) { navigator.geolocation.clearWatch(watchId); watchId=null; }
+  if (userMk)  { userMk.setMap(null); userMk=null; }
   document.getElementById('navBubble').classList.remove('visible');
-  document.getElementById('noNavMsg').style.display    = 'block';
-  document.getElementById('stepsContainer').style.display = 'none';
-  document.getElementById('liveLabel').textContent = 'Live traffic data';
+  document.getElementById('noNavMsg').style.display='block';
+  document.getElementById('stepsContainer').style.display='none';
+  document.getElementById('liveLabel').textContent='Live traffic data';
 }
-
 function advStep(pos) {
-  if (!navSteps || stepIdx >= navSteps.length) return;
-  const end = navSteps[stepIdx].end_location;
-  if (hav(pos.lat, pos.lng, end.lat(), end.lng()) < 50) {
-    stepIdx = Math.min(stepIdx + 1, navSteps.length - 1);
-    showBubble(stepIdx);
-    document.querySelectorAll('.step-item').forEach((el, i) => {
-      el.classList.toggle('current', i === stepIdx);
-      if (i === stepIdx) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (!navSteps||stepIdx>=navSteps.length) return;
+  const end=navSteps[stepIdx].end_location;
+  if (hav(pos.lat,pos.lng,end.lat(),end.lng())<50) {
+    stepIdx=Math.min(stepIdx+1,navSteps.length-1); showBubble(stepIdx);
+    document.querySelectorAll('.step-item').forEach((el,i)=>{
+      el.classList.toggle('current',i===stepIdx);
+      if (i===stepIdx) el.scrollIntoView({behavior:'smooth',block:'nearest'});
     });
   }
 }
-
 function showBubble(i) {
-  if (!navSteps || !navSteps[i]) return;
-  const s = navSteps[i];
-  document.getElementById('nbIcon').textContent = turnIco(s.maneuver);
-  document.getElementById('nbText').innerHTML   = strip(s.instructions);
-  document.getElementById('nbDist').textContent = 'in ' + s.distance.text;
+  if (!navSteps||!navSteps[i]) return;
+  const s=navSteps[i];
+  document.getElementById('nbIcon').textContent=turnIco(s.maneuver);
+  document.getElementById('nbText').innerHTML=strip(s.instructions);
+  document.getElementById('nbDist').textContent='in '+s.distance.text;
 }
-
 function renderSteps(steps) {
-  document.getElementById('stepsList').innerHTML = steps.map((s, i) => `
-    <div class="step-item ${i === 0 ? 'current' : ''}">
+  document.getElementById('stepsList').innerHTML=steps.map((s,i)=>`
+    <div class="step-item ${i===0?'current':''}">
       <div class="step-icon">${turnIco(s.maneuver)}</div>
-      <div class="step-text">
-        <strong>${strip(s.instructions)}</strong>
+      <div class="step-text"><strong>${strip(s.instructions)}</strong>
         <div class="step-dist">${s.distance.text} · ${s.duration.text}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
-
 function turnIco(m) {
-  m = m || '';
-  if (m.includes('left'))       return '↰';
-  if (m.includes('right'))      return '↱';
-  if (m.includes('uturn'))      return '↩';
+  m=m||'';
+  if (m.includes('left')) return '↰';
+  if (m.includes('right')) return '↱';
+  if (m.includes('uturn')) return '↩';
   if (m.includes('roundabout')) return '↺';
-  if (m.includes('arrive'))     return '📍';
+  if (m.includes('arrive')) return '📍';
   return '↑';
 }
-
-function hav(a, b, c, d) {
-  const R = 6371000, dl = (c-a)*Math.PI/180, dg = (d-b)*Math.PI/180;
-  const x = Math.sin(dl/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dg/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+function hav(a,b,c,d) {
+  const R=6371000,dl=(c-a)*Math.PI/180,dg=(d-b)*Math.PI/180;
+  const x=Math.sin(dl/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dg/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
+function strip(h){const t=document.createElement('div');t.innerHTML=h;return t.textContent;}
 
-function strip(h) { const t = document.createElement('div'); t.innerHTML = h; return t.textContent; }
-
-/* ─────────────────────────────────────────
-   MAP CONTROLS
-───────────────────────────────────────── */
-function setMapType(t, btn) {
+/* ── MAP CONTROLS ── */
+function setMapType(t,btn) {
   if (!gmap) return;
   gmap.setMapTypeId(t);
-  // Only apply custom dark style on roadmap; satellite/hybrid use Google's own imagery
-  gmap.setOptions({ styles: t === 'roadmap' ? darkStyle() : null });
-  document.querySelectorAll('#btnRoad,#btnSat,#btnHybrid').forEach(b => b.classList.remove('active'));
+  gmap.setOptions({styles:t==='roadmap'?darkStyle():null});
+  document.querySelectorAll('#btnRoad,#btnSat,#btnHybrid').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
 }
-
 function toggleTraffic(btn) {
-  trafficOn = !trafficOn;
-  trafficLayer.setMap(trafficOn ? gmap : null);
-  btn.classList.toggle('active', trafficOn);
+  trafficOn=!trafficOn; trafficLayer.setMap(trafficOn?gmap:null);
+  btn.classList.toggle('active',trafficOn);
 }
-
 function goMyLoc() {
-  if (!gmap || !navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(p => {
-    gmap.setCenter({ lat: p.coords.latitude, lng: p.coords.longitude });
-    gmap.setZoom(16);
+  if (!gmap||!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p=>{
+    gmap.setCenter({lat:p.coords.latitude,lng:p.coords.longitude}); gmap.setZoom(16);
   });
 }
-
 function swapLocations() {
-  const ov = getInp('origin').value, dv = getInp('dest').value;
-  getInp('origin').value = dv; getInp('dest').value = ov;
-  const tmp = cOrigin; cOrigin = cDest; cDest = tmp;
+  const ov=getInp('origin').value, dv=getInp('dest').value;
+  getInp('origin').value=dv; getInp('dest').value=ov;
+  const tmp=cOrigin; cOrigin=cDest; cDest=tmp;
   if (cOrigin) setFieldState('origin','confirmed'); else setFieldState('origin','neutral');
-  if (cDest)   setFieldState('dest',  'confirmed'); else setFieldState('dest',  'neutral');
-  closeBar();
-  if (cOrigin && cDest) openBar();
+  if (cDest)   setFieldState('dest','confirmed');   else setFieldState('dest','neutral');
+  closeBar(); if (cOrigin&&cDest) openBar();
 }
 
-/* ─────────────────────────────────────────
-   TABS
-───────────────────────────────────────── */
-function showTab(id, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+/* ── TABS ── */
+function showTab(id,btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('tab-' + id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
 }
 
-/* ─────────────────────────────────────────
-   STATUS BANNER
-───────────────────────────────────────── */
-function setStatus(t, txt) {
-  const b  = document.getElementById('statusBanner');
-  b.className = 'status-banner ' + t;
-  const ic = { loading: '<span class="spin">◌</span>', live: '●', demo: '◈', err: '✕' };
-  document.getElementById('statusText').innerHTML = (ic[t] || '') + ' ' + txt;
+/* ── STATUS ── */
+function setStatus(t,txt) {
+  const b=document.getElementById('statusBanner');
+  b.className='status-banner '+t;
+  const ic={loading:'<span class="spin">◌</span>',live:'●',demo:'◈',err:'✕'};
+  document.getElementById('statusText').innerHTML=(ic[t]||'')+' '+txt;
 }
 
-/* ─────────────────────────────────────────
-   TOAST
-───────────────────────────────────────── */
+/* ── TOAST ── */
 let toastTimer;
-function toast(msg, type) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className   = 'toast' + (type === 'ok' ? ' ok' : '');
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3400);
+function toast(msg,type) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast'+(type==='ok'?' ok':'');
+  el.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3400);
 }
 
-/* ─────────────────────────────────────────
-   DEPARTURE TIMING CHART
-───────────────────────────────────────── */
+/* ── TIMING CHART ── */
 function buildChart() {
-  const now  = new Date();
-  const nowH = now.getHours() + now.getMinutes() / 60;
-  const cong = [10,8,8,10,20,38,65,80,75,68,55,48,42,46,52,60,55,42,32,24,18,13,10,8];
-  const base = 5.5;
-  const slots = Array.from({ length: 18 }, (_, i) => {
-    const h = base + i * 0.25;
-    return { h, c: cong[Math.floor(h * 2) % cong.length] };
-  });
-  const minC = Math.min(...slots.map(s => s.c));
-  const bi   = slots.findIndex(s => s.c === minC);
-  const wrap = document.getElementById('chartBars');
-  wrap.innerHTML = '';
-  slots.forEach((s, i) => {
-    const p     = s.c / 90;
-    const color = s.c < 30 ? '#1fdf72' : s.c < 58 ? '#f5a41f' : '#ef4343';
-    const col   = document.createElement('div');
-    col.className = 'bar-col';
-    col.innerHTML = `
-      <div class="bar-inner${i === bi ? ' best' : ''}" style="height:${Math.max(p*60,3)}px;background:${color};opacity:${i===bi?1:0.55}">
-        ${i === bi ? '<span class="best-tag">best</span>' : ''}
-      </div>
-      <div class="bar-lbl">${i%4===0?fH(s.h):''}</div>`;
+  const now=new Date(), nowH=now.getHours()+now.getMinutes()/60;
+  const cong=[10,8,8,10,20,38,65,80,75,68,55,48,42,46,52,60,55,42,32,24,18,13,10,8];
+  const base=5.5;
+  const slots=Array.from({length:18},(_,i)=>{const h=base+i*0.25;return{h,c:cong[Math.floor(h*2)%cong.length]};});
+  const minC=Math.min(...slots.map(s=>s.c)), bi=slots.findIndex(s=>s.c===minC);
+  const wrap=document.getElementById('chartBars'); wrap.innerHTML='';
+  slots.forEach((s,i)=>{
+    const p=s.c/90, color=s.c<30?'#1fdf72':s.c<58?'#f5a41f':'#ef4343';
+    const col=document.createElement('div'); col.className='bar-col';
+    col.innerHTML=`<div class="bar-inner${i===bi?' best':''}" style="height:${Math.max(p*60,3)}px;background:${color};opacity:${i===bi?1:0.55}">${i===bi?'<span class="best-tag">best</span>':''}</div><div class="bar-lbl">${i%4===0?fH(s.h):''}</div>`;
     wrap.appendChild(col);
   });
-  const fr = (nowH - base) / (18 * 0.25);
-  const ln = document.getElementById('nowLine');
-  if (fr >= 0 && fr <= 1) ln.style.left = (fr * 100).toFixed(1) + '%';
-  const bh = slots[bi];
-  document.getElementById('departBest').innerHTML =
-    `Best window: <strong style="color:var(--green)">${fH(bh.h)} – ${fH(bh.h + 0.5)}</strong>`;
+  const fr=(nowH-base)/(18*0.25), ln=document.getElementById('nowLine');
+  if (fr>=0&&fr<=1) ln.style.left=(fr*100).toFixed(1)+'%';
+  const bh=slots[bi];
+  document.getElementById('departBest').innerHTML=`Best window: <strong style="color:var(--green)">${fH(bh.h)} – ${fH(bh.h+0.5)}</strong>`;
 }
-
 function fH(h) {
-  const hh = Math.floor(h)%12||12, mm = h%1===0?'00':'30', ap = Math.floor(h)<12?'AM':'PM';
+  const hh=Math.floor(h)%12||12, mm=h%1===0?'00':'30', ap=Math.floor(h)<12?'AM':'PM';
   return `${hh}:${mm}${ap}`;
 }
 
-/* ─────────────────────────────────────────
-   INCIDENTS
-───────────────────────────────────────── */
+/* ── INCIDENTS ── */
 function renderIncidents() {
-  document.getElementById('incidentsList').innerHTML = `
+  document.getElementById('incidentsList').innerHTML=`
     <div class="section-label">Live incidents</div>
     <div class="inc-item"><div class="inc-dot" style="background:var(--red)"></div><div class="inc-body"><strong>Accident — Half Way Tree Rd</strong><br>2-lane block near Liguanea. 20+ min delay.</div></div>
     <div class="inc-item"><div class="inc-dot" style="background:var(--amber)"></div><div class="inc-body"><strong>Roadwork — Washington Blvd</strong><br>Lane closure until 9 AM. Slow-moving.</div></div>
@@ -1027,36 +872,32 @@ function renderIncidents() {
     <div class="inc-item"><div class="inc-dot" style="background:var(--amber)"></div><div class="inc-body"><strong>New Kingston — Trafalgar Rd</strong><br>Minor congestion near Emancipation Park.</div></div>`;
 }
 
-/* ─────────────────────────────────────────
-   DARK MAP STYLE
-───────────────────────────────────────── */
+/* ── DARK MAP STYLE ── */
 function darkStyle() {
   return [
-    { elementType: 'geometry',            stylers: [{ color: '#1a2035' }] },
-    { elementType: 'labels.text.stroke',  stylers: [{ color: '#1a2035' }] },
-    { elementType: 'labels.text.fill',    stylers: [{ color: '#8899bb' }] },
-    { featureType: 'administrative',      elementType: 'geometry.stroke', stylers: [{ color: '#2a3560' }] },
-    { featureType: 'road',                elementType: 'geometry',        stylers: [{ color: '#2c3e6b' }] },
-    { featureType: 'road',                elementType: 'labels.text.fill',stylers: [{ color: '#9aa8c8' }] },
-    { featureType: 'road.highway',        elementType: 'geometry',        stylers: [{ color: '#3a5080' }] },
-    { featureType: 'road.highway',        elementType: 'geometry.stroke', stylers: [{ color: '#1a2a50' }] },
-    { featureType: 'road.highway',        elementType: 'labels.text.fill',stylers: [{ color: '#aabbdd' }] },
-    { featureType: 'road.arterial',       elementType: 'geometry',        stylers: [{ color: '#253355' }] },
-    { featureType: 'road.local',          elementType: 'geometry',        stylers: [{ color: '#1e2b45' }] },
-    { featureType: 'water',               elementType: 'geometry',        stylers: [{ color: '#0d1526' }] },
-    { featureType: 'water',               elementType: 'labels.text.fill',stylers: [{ color: '#4a6a9a' }] },
-    { featureType: 'poi',                 elementType: 'geometry',        stylers: [{ color: '#1e2b40' }] },
-    { featureType: 'poi.park',            elementType: 'geometry',        stylers: [{ color: '#1a2e30' }] },
-    { featureType: 'poi.park',            elementType: 'labels.text.fill',stylers: [{ color: '#3a6a4a' }] },
-    { featureType: 'transit',             elementType: 'geometry',        stylers: [{ color: '#1e2840' }] },
-    { featureType: 'landscape',           elementType: 'geometry',        stylers: [{ color: '#1a2035' }] },
+    {elementType:'geometry',stylers:[{color:'#1a2035'}]},
+    {elementType:'labels.text.stroke',stylers:[{color:'#1a2035'}]},
+    {elementType:'labels.text.fill',stylers:[{color:'#8899bb'}]},
+    {featureType:'administrative',elementType:'geometry.stroke',stylers:[{color:'#2a3560'}]},
+    {featureType:'road',elementType:'geometry',stylers:[{color:'#2c3e6b'}]},
+    {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#9aa8c8'}]},
+    {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#3a5080'}]},
+    {featureType:'road.highway',elementType:'geometry.stroke',stylers:[{color:'#1a2a50'}]},
+    {featureType:'road.highway',elementType:'labels.text.fill',stylers:[{color:'#aabbdd'}]},
+    {featureType:'road.arterial',elementType:'geometry',stylers:[{color:'#253355'}]},
+    {featureType:'road.local',elementType:'geometry',stylers:[{color:'#1e2b45'}]},
+    {featureType:'water',elementType:'geometry',stylers:[{color:'#0d1526'}]},
+    {featureType:'water',elementType:'labels.text.fill',stylers:[{color:'#4a6a9a'}]},
+    {featureType:'poi',elementType:'geometry',stylers:[{color:'#1e2b40'}]},
+    {featureType:'poi.park',elementType:'geometry',stylers:[{color:'#1a2e30'}]},
+    {featureType:'poi.park',elementType:'labels.text.fill',stylers:[{color:'#3a6a4a'}]},
+    {featureType:'transit',elementType:'geometry',stylers:[{color:'#1e2840'}]},
+    {featureType:'landscape',elementType:'geometry',stylers:[{color:'#1a2035'}]},
   ];
 }
 
-/* ─────────────────────────────────────────
-   AUTO-REFRESH
-───────────────────────────────────────── */
-setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
+/* ── AUTO-REFRESH ── */
+setInterval(()=>{ if(!navMode&&cOrigin&&cDest) runDir(); }, REFRESH_MS);
 </script>
 
 <script>
@@ -1071,6 +912,8 @@ setInterval(() => { if (!navMode && cOrigin && cDest) runDir(); }, REFRESH_MS);
 
   window._initMapReal = window.initMap;
   window.initMap = function () {
+    // Double rAF: guarantees the browser has finished painting the flex
+    // layout before Google Maps reads the container dimensions
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         window._initMapReal();
