@@ -406,8 +406,13 @@ function initMap() {
     zoomControl: true,
     fullscreenControl: true,
     gestureHandling: 'greedy',
-    styles: darkStyle(),
+    // Dark style applied after init to avoid tile-load race condition
   });
+
+  // Apply dark style after a short delay so tiles load first
+  setTimeout(() => {
+    gmap.setOptions({ styles: darkStyle() });
+  }, 800);
 
   dirSvc       = new google.maps.DirectionsService();
   geocoder     = new google.maps.Geocoder();
@@ -933,7 +938,8 @@ function strip(h) { const t = document.createElement('div'); t.innerHTML = h; re
 function setMapType(t, btn) {
   if (!gmap) return;
   gmap.setMapTypeId(t);
-  gmap.setOptions({ styles: t === 'roadmap' ? darkStyle() : [] });
+  // Only apply custom dark style on roadmap; satellite/hybrid use Google's own imagery
+  gmap.setOptions({ styles: t === 'roadmap' ? darkStyle() : null });
   document.querySelectorAll('#btnRoad,#btnSat,#btnHybrid').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
