@@ -911,20 +911,38 @@ function startNav(e, idx) {
   // Zoom in to start — tilted view like Google Maps navigation
   gmap.setOptions({ tilt: 45 });
   gmap.setZoom(17);
-  gmap.setCenter({ lat: leg.start_location.lat(), lng: leg.start_location.lng() });
+  const startLat = leg.start_location.lat();
+  const startLng = leg.start_location.lng();
+  gmap.setCenter({ lat: startLat, lng: startLng });
   gmap.setMapTypeId('hybrid');
 
-  // Highlight selected route strongly
+  // Force map to re-render after DOM changes settle
+  setTimeout(() => {
+    google.maps.event.trigger(gmap, 'resize');
+    gmap.setCenter({ lat: startLat, lng: startLng });
+  }, 200);
+
+  // Highlight selected route — keep it visible, dim alternatives
   renderers.forEach((r,i) => r.setOptions({
     polylineOptions: {
       strokeColor: COLORS[i%COLORS.length],
-      strokeOpacity: i===idx ? 1 : 0,
-      strokeWeight: i===idx ? 9 : 0,
-      zIndex: 10,
+      strokeOpacity: i===idx ? 1 : 0.15,
+      strokeWeight: i===idx ? 9 : 3,
+      zIndex: i===idx ? 10 : 1,
     }
   }));
 
   document.getElementById('liveLabel').textContent = '▶ Navigation active';
+
+  // Force map resize after layout shift (sidebar tab switch causes reflow)
+  setTimeout(() => {
+    if (gmap) {
+      google.maps.event.trigger(gmap, 'resize');
+      // Re-center on start of route
+      const leg = allRoutes[idx].legs[0];
+      gmap.setCenter({ lat: leg.start_location.lat(), lng: leg.start_location.lng() });
+    }
+  }, 100);
 
   // GPS watch
   if (navigator.geolocation) {
@@ -971,12 +989,17 @@ function stopNav() {
   document.getElementById('stepsContainer').style.display = 'none';
   document.getElementById('liveLabel').textContent = 'Live traffic data';
 
-  // Reset tilt, restore route view
+  // Reset tilt, restore route display
   gmap.setOptions({ tilt: 0 });
-  if (allRoutes[selIdx]) fitRouteBounds(allRoutes[selIdx]);
-
-  // Restore route display
   if (lastDirResult) drawRoutes(lastDirResult);
+
+  // Trigger resize after sidebar reappears, then fit route
+  setTimeout(() => {
+    if (gmap) {
+      google.maps.event.trigger(gmap, 'resize');
+      if (allRoutes[selIdx]) fitRouteBounds(allRoutes[selIdx]);
+    }
+  }, 150);
 }
 
 /* ── UPDATE NAV OVERLAY ── */
