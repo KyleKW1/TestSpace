@@ -17,6 +17,7 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 
 :root {
   --green: #1fdf72; --amber: #f5a41f; --red: #ef4343; --blue: #3d9ef5;
+  --purple: #9b6dff; --teal: #1fd4df;
   --text: #dce5f7; --muted: #6b7a9b; --dim: #2e3a5a;
   --glass: rgba(9,12,22,0.95); --border: rgba(40,55,100,0.75);
   --card: rgba(14,20,42,0.97);
@@ -113,18 +114,37 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 .spin { display: inline-block; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── ROUTE TYPE FILTER ── */
+#routeFilter {
+  display: flex; gap: 6px; padding: 0 0 4px 0; flex-shrink: 0;
+}
+.rftab {
+  flex: 1; padding: 6px 4px; font-size: 9px; font-weight: 700;
+  letter-spacing: .5px; text-transform: uppercase; cursor: pointer;
+  border-radius: 6px; border: 1px solid var(--border);
+  background: rgba(14,20,42,.6); color: var(--muted);
+  font-family: 'Syne', sans-serif; transition: all .2s;
+}
+.rftab.on { border-color: var(--purple); color: var(--purple); background: rgba(155,109,255,.08); }
+.rftab.on.highway { border-color: var(--blue); color: var(--blue); background: rgba(61,158,245,.08); }
+.rftab.on.all { border-color: var(--green); color: var(--green); background: rgba(31,223,114,.08); }
+
 .rcard { background: rgba(14,20,42,.8); border: 1px solid var(--border); border-radius: 10px; padding: 13px; cursor: pointer; transition: all .18s; position: relative; overflow: hidden; margin-bottom: 8px; }
 .rcard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px; }
 .rcard.r0::before { background: var(--green); }
 .rcard.r1::before { background: var(--amber); }
 .rcard.r2::before { background: var(--red); }
+.rcard.rlocal::before { background: var(--purple); }
 .rcard.sel { border-color: var(--blue); background: rgba(61,158,245,.06); }
-.rhdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 9px; }
-.rname { font-size: 13px; font-weight: 700; color: var(--text); }
-.rbadge { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px; font-family: 'DM Mono', monospace; }
+.rhdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 9px; gap: 6px; }
+.rname { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; min-width: 0; }
+.rbadges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
+.rbadge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; font-family: 'DM Mono', monospace; }
 .bg { background: rgba(31,223,114,.12); color: var(--green); }
 .ba { background: rgba(245,164,31,.12); color: var(--amber); }
 .br { background: rgba(239,67,67,.12); color: var(--red); }
+.bp { background: rgba(155,109,255,.15); color: var(--purple); }
+.bt { background: rgba(31,212,223,.12); color: var(--teal); }
 .rstats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 .stat { text-align: center; }
 .sv { font-size: 18px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; }
@@ -133,6 +153,13 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 .tfill { height: 100%; border-radius: 2px; }
 .startbtn { width: 100%; margin-top: 10px; padding: 9px; border-radius: 7px; border: none; font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; cursor: pointer; background: var(--green); color: #050810; display: block; }
 .startbtn:hover { opacity: .85; }
+.startbtn.local { background: var(--purple); color: #fff; }
+
+/* Route type dividers */
+.rsection { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 4px 2px 6px; border-bottom: 1px solid var(--border); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.rsection::before { content: ''; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.rsection.highway::before { background: var(--blue); }
+.rsection.local::before { background: var(--purple); }
 
 .nhdr { background: rgba(14,20,42,.8); border: 1px solid var(--border); border-radius: 10px; padding: 13px; text-align: center; }
 .neta { font-size: 30px; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--green); }
@@ -171,9 +198,12 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
   backdrop-filter: blur(24px); box-shadow: 0 4px 40px rgba(31,223,114,.2);
   min-width: 300px; max-width: 420px; pointer-events: auto;
 }
+.tcin.local { border-color: var(--purple); box-shadow: 0 4px 40px rgba(155,109,255,.2); }
 .tcarrow { width: 54px; height: 54px; background: rgba(31,223,114,.1); border: 2px solid var(--green); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+.tcin.local .tcarrow { background: rgba(155,109,255,.1); border-color: var(--purple); }
 .tcinfo { flex: 1; min-width: 0; }
 .tcdist { font-size: 24px; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--green); line-height: 1; }
+.tcin.local .tcdist { color: var(--purple); }
 .tcst { font-size: 13px; color: var(--text); font-weight: 600; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tcnx { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -181,8 +211,10 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 #etabar.on { display: block; }
 .eprog { height: 4px; background: rgba(28,37,64,.8); }
 .efill { height: 100%; background: linear-gradient(90deg, var(--green), #0fa84e); transition: width .5s; }
+.efill.local { background: linear-gradient(90deg, #7a50d0, var(--purple)); }
 .einn { background: rgba(6,9,20,0.98); backdrop-filter: blur(24px); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 12px 20px; gap: 20px; }
 .emins { font-size: 40px; font-weight: 800; font-family: 'DM Mono', monospace; color: var(--green); line-height: 1; }
+.emins.local { color: var(--purple); }
 .eunit { font-size: 14px; font-weight: 400; color: var(--muted); }
 .edet { flex: 1; }
 .edist { font-size: 13px; color: var(--text); font-weight: 600; }
@@ -194,6 +226,7 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 .mc { background: rgba(6,9,20,.92); border: 1px solid var(--border); backdrop-filter: blur(14px); border-radius: 8px; padding: 7px 12px; font-size: 11px; font-weight: 700; font-family: 'Syne', sans-serif; color: var(--muted); cursor: pointer; transition: all .2s; white-space: nowrap; }
 .mc:hover { border-color: var(--muted); color: var(--text); }
 .mc.on { border-color: var(--green); color: var(--green); background: rgba(31,223,114,.07); }
+.mc.on.local-btn { border-color: var(--purple); color: var(--purple); background: rgba(155,109,255,.1); }
 
 #livechip { position: fixed; bottom: 14px; left: 14px; z-index: 160; background: rgba(6,9,20,.92); border: 1px solid var(--border); backdrop-filter: blur(14px); border-radius: 20px; padding: 5px 12px; font-size: 10px; font-family: 'DM Mono', monospace; display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse 1.5s infinite; }
@@ -278,6 +311,12 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
   </div>
   <div class="pane on" id="p-routes">
     <div class="sbanner load" id="sbanner"><span class="spin">◌</span><span id="stxt">Enter locations and tap GO</span></div>
+    <!-- Route type filter -->
+    <div id="routeFilter" style="display:none">
+      <button class="rftab on all" id="rfAll" onclick="filterRoutes('all',this)">🗺 All Routes</button>
+      <button class="rftab highway" id="rfHwy" onclick="filterRoutes('highway',this)">🛣 Highway</button>
+      <button class="rftab" id="rfLocal" onclick="filterRoutes('local',this)">🏘 Community</button>
+    </div>
     <div class="slbl">Available Routes</div>
     <div id="rlist"><div style="color:var(--muted);font-size:12px;text-align:center;padding:24px 0;line-height:2">Enter locations above<br>then tap <strong style="color:var(--text)">GO</strong></div></div>
   </div>
@@ -318,7 +357,7 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 
 <!-- WAZE TURN CARD -->
 <div id="tcard">
-  <div class="tcin">
+  <div class="tcin" id="tcin">
     <div class="tcarrow" id="tcArr">↑</div>
     <div class="tcinfo">
       <div class="tcdist" id="tcDist">—</div>
@@ -344,6 +383,7 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
   <button class="mc" id="bSat"  onclick="setMT('satellite',this)">🛰 Satellite</button>
   <button class="mc on" id="bHyb" onclick="setMT('hybrid',this)">🌐 Hybrid</button>
   <button class="mc on" id="bTrf" onclick="togTrf(this)">🔴 Traffic</button>
+  <button class="mc local-btn" id="bLocal" onclick="togLocal(this)">🏘 Local Roads</button>
   <button class="mc" onclick="myLoc()">📍 My Loc</button>
 </div>
 
@@ -355,13 +395,20 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
 <script>
 const GKEY = 'AIzaSyDfTY6wYmtnixGpPov9ElRRDJG2QFl6xjA';
 const KC = { lat: 17.9970, lng: -76.7936 };
-const COLS = ['#1fdf72','#f5a41f','#ef4343','#9b6dff'];
+
+// Highway routes: blue shades. Local/community routes: purple/teal shades.
+const HWY_COLS  = ['#3d9ef5','#1fdf72','#f5a41f','#ef4343'];
+const LOCAL_COLS = ['#9b6dff','#1fd4df','#c084fc','#38bdf8'];
 
 let gmap, dirSvc, geocoder, tLayer;
 let renderers=[], routes=[], selIdx=0, lastRes=null;
 let navMode=false, navSteps=[], stepIdx=0, totalDist=0;
 let watchId=null, uMk=null, tOn=true, panelOn=false;
 let cO=null, cD=null;
+let localMode=false;          // toggle: also fetch community/minor road routes
+let routeMeta=[];             // [{route, isLocal, globalIdx}] — merged list
+let routeFilter='all';        // 'all' | 'highway' | 'local'
+let activeNavIsLocal=false;   // track nav colour theme
 const ac={o:{t:null,fi:-1,s:[]},d:{t:null,fi:-1,s:[]}};
 
 /* CLOCK */
@@ -390,9 +437,6 @@ async function initMap() {
   tLayer   = new TrafficLayer();
   tLayer.setMap(gmap);
 
-  // NOTE: Do NOT cache DirectionsRenderer here — import it fresh in drawAll()
-  // to avoid constructor reference issues in sandboxed/CSP environments.
-
   document.addEventListener('click', e => {
     if (!e.target.closest('#ow')) closeDrop('o');
     if (!e.target.closest('#dw')) closeDrop('d');
@@ -401,7 +445,23 @@ async function initMap() {
   buildChart();
 }
 
-/* AUTOCOMPLETE — using new Places API */
+/* ── LOCAL ROADS TOGGLE ── */
+function togLocal(btn) {
+  localMode = !localMode;
+  btn.classList.toggle('on', localMode);
+  if (cO && cD) runDir();
+  else toast(localMode ? '🏘 Local Roads ON — tap GO to apply' : '🛣 Standard routing restored');
+}
+
+/* ── ROUTE FILTER (panel tabs) ── */
+function filterRoutes(type, btn) {
+  routeFilter = type;
+  document.querySelectorAll('.rftab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderRouteList();
+}
+
+/* AUTOCOMPLETE */
 async function fetchSug(w, q) {
   try {
     const { AutocompleteSuggestion } = await google.maps.importLibrary("places");
@@ -413,7 +473,6 @@ async function fetchSug(w, q) {
     if (suggestions && suggestions.length > 0) {
       renderSug(w, suggestions);
     } else {
-      // retry with Jamaica appended
       const { suggestions: s2 } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
         input: q + ' Jamaica',
         locationBias: { lat: KC.lat, lng: KC.lng, radius: 100000 },
@@ -440,7 +499,6 @@ function renderSug(w, suggestions) {
   }).join(''));
 }
 
-/* FIX 1: Safely extract lat/lng and text fields from the new Places API */
 async function pickSug(e, w, i) {
   e.preventDefault();
   const suggestion = ac[w].s[i];
@@ -451,22 +509,16 @@ async function pickSug(e, w, i) {
   try {
     const place = pred.toPlace();
     await place.fetchFields({ fields: ['location', 'formattedAddress', 'displayName'] });
-
-    // Safely extract LatLng — new Places API may return object or LatLng instance
     const loc = place.location;
     const lat = typeof loc.lat === 'function' ? loc.lat() : Number(loc.lat);
     const lng = typeof loc.lng === 'function' ? loc.lng() : Number(loc.lng);
-
-    // displayName and formattedAddress may be plain strings or objects with .text
     const name = (typeof place.displayName === 'object' && place.displayName !== null)
       ? (place.displayName.text || place.displayName.toString())
       : (place.displayName || fi(w).value);
     const addr = (typeof place.formattedAddress === 'object' && place.formattedAddress !== null)
       ? (place.formattedAddress.text || place.formattedAddress.toString())
       : (place.formattedAddress || '');
-
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) throw new Error('No valid coordinates returned');
-
     setConf(w, name, addr, lat, lng);
     toast('✅ ' + name + ' confirmed', 'ok');
   } catch(err) {
@@ -554,7 +606,7 @@ function togglePanel() {
   document.getElementById('ptab').classList.toggle('on', panelOn);
   setTimeout(() => {
     google.maps.event.trigger(gmap, 'resize');
-    if (lastRes && !navMode) fitBounds(routes[selIdx]);
+    if (lastRes && !navMode) fitBounds(routeMeta[selIdx]?.route || routes[0]);
   }, 320);
 }
 function openPanel() { if (!panelOn) togglePanel(); }
@@ -583,91 +635,209 @@ function fitBounds(route) {
     : { top:100, right:80, bottom:60, left:60  };
   gmap.fitBounds(b, pad);
 }
-function doFit() { if (routes[selIdx]) fitBounds(routes[selIdx]); }
+function doFit() {
+  const m = routeMeta[selIdx];
+  if (m) fitBounds(m.route);
+}
 
-/* DIRECTIONS */
+/* ================================================================
+   DIRECTIONS — fires two parallel requests:
+   1. Standard (highways allowed)  → tagged isLocal=false
+   2. Avoid highways               → tagged isLocal=true
+   ================================================================ */
 function runDir(){
   if(!cO||!cD||!dirSvc) return;
-  setStat('load','Calculating routes…');
+  setStat('load', localMode ? 'Calculating highway + community routes…' : 'Calculating routes…');
   clearR();
-  dirSvc.route({
-    origin:{lat:cO.lat,lng:cO.lng},
-    destination:{lat:cD.lat,lng:cD.lng},
-    travelMode:google.maps.TravelMode.DRIVING,
-    provideRouteAlternatives:true,
+  routeMeta = [];
+
+  const base = {
+    origin:      {lat:cO.lat,lng:cO.lng},
+    destination: {lat:cD.lat,lng:cD.lng},
+    travelMode:  google.maps.TravelMode.DRIVING,
+    provideRouteAlternatives: true,
     drivingOptions:{departureTime:new Date(),trafficModel:google.maps.TrafficModel.BEST_GUESS},
-  },(res,st)=>{
-    if(st==='OK'){
-      lastRes=res; routes=res.routes; selIdx=0;
-      drawAll(res);
-      buildRouteList(res.routes);
-      fitBounds(res.routes[0]);
-      document.getElementById('fitbtn').classList.add('on');
-      setStat('live','Live · '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
-      document.getElementById('llbl').textContent='Live traffic data';
-    } else {
-      setStat('err','Route not found ('+st+')');
+  };
+
+  // Promise-based wrapper so we can use Promise.allSettled
+  const req = (opts) => new Promise((res,rej)=>dirSvc.route(opts,(data,st)=>{
+    if(st==='OK') res(data); else rej(st);
+  }));
+
+  const requests = [req(base)];
+  if (localMode) requests.push(req({...base, avoidHighways: true, avoidTolls: true}));
+
+  Promise.allSettled(requests).then(results => {
+    const hwRes    = results[0].status==='fulfilled' ? results[0].value : null;
+    const localRes = results[1]?.status==='fulfilled' ? results[1].value : null;
+
+    if (!hwRes && !localRes) {
+      setStat('err','No routes found');
       toast('❌ No route found — check locations are in Jamaica');
+      return;
     }
+
+    // Tag highway routes
+    if (hwRes) {
+      hwRes.routes.forEach((r,i)=>{
+        routeMeta.push({route:r, isLocal:false, resRef:hwRes, resIdx:i});
+      });
+    }
+
+    // Tag local routes — deduplicate by summary string
+    if (localRes) {
+      const hwSummaries = new Set((hwRes?.routes||[]).map(r=>r.summary));
+      localRes.routes.forEach((r,i)=>{
+        if (!hwSummaries.has(r.summary)) {
+          routeMeta.push({route:r, isLocal:true, resRef:localRes, resIdx:i});
+        }
+      });
+    }
+
+    // Default select: fastest overall
+    selIdx = 0;
+    routes = routeMeta.map(m=>m.route);
+    lastRes = hwRes; // keep a ref for compat
+
+    drawAllMeta();
+    renderRouteList();
+    document.getElementById('routeFilter').style.display = localMode ? 'flex' : 'none';
+    fitBounds(routes[0]);
+    document.getElementById('fitbtn').classList.add('on');
+
+    const hwyCount   = routeMeta.filter(m=>!m.isLocal).length;
+    const localCount = routeMeta.filter(m=>m.isLocal).length;
+    const label = localMode
+      ? `Live · ${hwyCount} highway, ${localCount} community`
+      : `Live · ${hwyCount} routes · ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+    setStat('live', label);
+    document.getElementById('llbl').textContent='Live traffic data';
   });
 }
 function doRerun(){if(cO&&cD)runDir();}
 
-/* DRAW — FIX 2: import DirectionsRenderer fresh each time, never cache on window */
+/* ── DRAW ALL from routeMeta ── */
 function clearR(){renderers.forEach(r=>r.setMap(null));renderers=[];}
-async function drawAll(res){
+
+async function drawAllMeta(){
   clearR();
   const { DirectionsRenderer } = await google.maps.importLibrary("routes");
-  res.routes.forEach((_,i)=>{
-    const sel=i===selIdx;
-    const r=new DirectionsRenderer({
-      map:gmap, routeIndex:i, directions:res,
-      suppressInfoWindows:true, suppressMarkers:i>0,
-      polylineOptions:{strokeColor:COLS[i%COLS.length],strokeOpacity:sel?.95:.22,strokeWeight:sel?9:4,zIndex:sel?10:1},
+
+  // Group by their direction result reference so we can set routeIndex correctly
+  // We need to draw each route from its own result
+  routeMeta.forEach((m, gi)=>{
+    const sel = gi === selIdx;
+    const palette = m.isLocal ? LOCAL_COLS : HWY_COLS;
+    const colIdx  = m.isLocal
+      ? routeMeta.filter((x,xi)=>x.isLocal&&xi<=gi).length - 1
+      : routeMeta.filter((x,xi)=>!x.isLocal&&xi<=gi).length - 1;
+    const col = palette[colIdx % palette.length];
+
+    const r = new DirectionsRenderer({
+      map: gmap,
+      routeIndex: m.resIdx,
+      directions: m.resRef,
+      suppressInfoWindows: true,
+      suppressMarkers: gi > 0,
+      polylineOptions:{
+        strokeColor:    col,
+        strokeOpacity:  sel ? 0.95 : 0.22,
+        strokeWeight:   sel ? 9    : 4,
+        zIndex:         sel ? 20   : 1,
+      },
     });
     renderers.push(r);
   });
 }
 
-/* ROUTE LIST */
-function buildRouteList(rts){
-  const rows=rts.map((r,i)=>{
-    const l=r.legs[0],t=l.duration_in_traffic?.value||l.duration.value;
+/* ── ROUTE LIST ── */
+function renderRouteList(){
+  const etas = routeMeta.map(m=>{
+    const l=m.route.legs[0], t=l.duration_in_traffic?.value||l.duration.value;
     const cong=Math.max(0,Math.min(99,Math.round((t/l.duration.value-1)*100)));
-    return{i,name:r.summary||'Route '+(i+1),eta:Math.round(t/60),dist:(l.distance.value/1000).toFixed(1),cong};
-  }).sort((a,b)=>a.eta-b.eta);
-  const lbs=['BEST','MODERATE','SLOWER'],bc=['bg','ba','br'];
-  const ec=['var(--green)','var(--amber)','var(--red)'];
-  const gr=['linear-gradient(90deg,#0fa84e,#1fdf72)','linear-gradient(90deg,#c4831a,#f5a41f)','linear-gradient(90deg,#b53030,#ef4343)'];
-  document.getElementById('rlist').innerHTML=rows.map((r,rank)=>`
-    <div class="rcard r${rank}${r.i===selIdx?' sel':''}" id="rc${r.i}" onclick="selRoute(${r.i})">
-      <div class="rhdr"><div class="rname">Via ${esc(r.name)}</div><div class="rbadge ${bc[rank]||'br'}">${lbs[rank]||'ALT'}</div></div>
-      <div class="rstats">
-        <div class="stat"><div class="sv" style="color:${ec[rank]}">${r.eta}<span style="font-size:11px;font-weight:400">m</span></div><div class="sk">ETA</div></div>
-        <div class="stat"><div class="sv">${r.dist}<span style="font-size:11px;font-weight:400">km</span></div><div class="sk">Dist</div></div>
-        <div class="stat"><div class="sv" style="color:${ec[rank]}">${r.cong}%</div><div class="sk">Traffic</div></div>
-      </div>
-      <div class="tbar"><div class="tfill" style="width:${r.cong}%;background:${gr[rank]||gr[2]}"></div></div>
-      <button class="startbtn" onclick="startNav(event,${r.i})">▶ START NAVIGATION</button>
-    </div>`).join('');
+    return{m, eta:Math.round(t/60), dist:(l.distance.value/1000).toFixed(1), cong};
+  });
+
+  // Sort by ETA within each group
+  const hwys  = etas.filter(e=>!e.m.isLocal).sort((a,b)=>a.eta-b.eta);
+  const locals = etas.filter(e=>e.m.isLocal).sort((a,b)=>a.eta-b.eta);
+
+  const show = routeFilter==='highway' ? hwys
+             : routeFilter==='local'   ? locals
+             : [...hwys, ...locals];
+
+  const ecolors=['var(--green)','var(--amber)','var(--red)'];
+  const grads=['linear-gradient(90deg,#0fa84e,#1fdf72)','linear-gradient(90deg,#c4831a,#f5a41f)','linear-gradient(90deg,#b53030,#ef4343)'];
+
+  let html='';
+
+  const renderGroup = (group, isLocal) => {
+    if (!group.length) return '';
+    const gi = routeMeta.indexOf(group[0].m);
+    let out = isLocal
+      ? `<div class="rsection local">🏘 Community &amp; Minor Roads</div>`
+      : (localMode ? `<div class="rsection highway">🛣 Highway Routes</div>` : '');
+
+    group.forEach((e,rank)=>{
+      const gi2 = routeMeta.indexOf(e.m);
+      const ec  = isLocal ? ['var(--purple)','var(--teal)','var(--purple)'] : ecolors;
+      const gr2 = isLocal
+        ? ['linear-gradient(90deg,#7a50d0,#9b6dff)','linear-gradient(90deg,#0ea5a8,#1fd4df)','linear-gradient(90deg,#7a50d0,#9b6dff)']
+        : grads;
+      const lbl = isLocal
+        ? (['DIRECT','SCENIC','ALT'][rank]||'ALT')
+        : (['FASTEST','MODERATE','SLOWER'][rank]||'ALT');
+      const bc  = isLocal
+        ? ['bp','bt','bp'][rank]||'bp'
+        : ['bg','ba','br'][rank]||'br';
+      out += `<div class="rcard${isLocal?' rlocal':' r'+rank}${gi2===selIdx?' sel':''}" id="rc${gi2}" onclick="selRoute(${gi2})">
+        <div class="rhdr">
+          <div class="rname">Via ${esc(e.m.route.summary||'route')}</div>
+          <div class="rbadges">
+            ${isLocal?'<div class="rbadge bp">🏘 LOCAL</div>':''}
+            <div class="rbadge ${bc}">${lbl}</div>
+          </div>
+        </div>
+        <div class="rstats">
+          <div class="stat"><div class="sv" style="color:${ec[rank]}">${e.eta}<span style="font-size:11px;font-weight:400">m</span></div><div class="sk">ETA</div></div>
+          <div class="stat"><div class="sv">${e.dist}<span style="font-size:11px;font-weight:400">km</span></div><div class="sk">Dist</div></div>
+          <div class="stat"><div class="sv" style="color:${ec[rank]}">${e.cong}%</div><div class="sk">Traffic</div></div>
+        </div>
+        <div class="tbar"><div class="tfill" style="width:${e.cong}%;background:${gr2[rank]||gr2[0]}"></div></div>
+        <button class="startbtn${isLocal?' local':''}" onclick="startNav(event,${gi2})">▶ ${isLocal?'COMMUNITY NAV':'START NAVIGATION'}</button>
+      </div>`;
+    });
+    return out;
+  };
+
+  if (routeFilter==='all') {
+    html += renderGroup(hwys,  false);
+    html += renderGroup(locals, true);
+  } else if (routeFilter==='highway') {
+    html += renderGroup(hwys, false);
+  } else {
+    html += renderGroup(locals, true);
+  }
+
+  if (!html) html='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0">No routes in this category</div>';
+  document.getElementById('rlist').innerHTML = html;
 }
 
-/* FIX 3: selRoute also needs to import DirectionsRenderer fresh */
-async function selRoute(i){
-  selIdx=i;
+async function selRoute(gi){
+  selIdx=gi;
   document.querySelectorAll('.rcard').forEach(c=>c.classList.remove('sel'));
-  document.getElementById('rc'+i)?.classList.add('sel');
-  // Re-draw all routes with new selection highlighted
-  if(lastRes) await drawAll(lastRes);
-  fitBounds(routes[i]);
+  document.getElementById('rc'+gi)?.classList.add('sel');
+  await drawAllMeta();
+  fitBounds(routes[gi]);
 }
 
-/* NAVIGATION */
-function startNav(e,idx){
+/* ── NAVIGATION ── */
+function startNav(e,gi){
   e.stopPropagation();
-  if(!routes[idx])return;
-  const route=routes[idx],leg=route.legs[0];
-  navMode=true;navSteps=leg.steps;stepIdx=0;selIdx=idx;totalDist=leg.distance.value;
+  const meta=routeMeta[gi]; if(!meta)return;
+  const route=meta.route, leg=route.legs[0];
+  navMode=true; navSteps=leg.steps; stepIdx=0; selIdx=gi; totalDist=leg.distance.value;
+  activeNavIsLocal=meta.isLocal;
 
   document.querySelectorAll('.ptb').forEach((b,i)=>b.classList.toggle('on',i===1));
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
@@ -676,7 +846,14 @@ function startNav(e,idx){
   document.getElementById('navCont').style.display='block';
   const mins=Math.round((leg.duration_in_traffic?.value||leg.duration.value)/60);
   document.getElementById('neta').textContent=mins+' min';
-  document.getElementById('nsub').textContent='via '+(route.summary||'Route');
+  document.getElementById('nsub').textContent=(meta.isLocal?'🏘 ':'🛣 ')+'via '+(route.summary||'Route');
+
+  // Style turn card and eta bar for route type
+  const tcin=document.getElementById('tcin');
+  const emins=document.getElementById('emins');
+  const efill=document.getElementById('efill');
+  if(meta.isLocal){tcin.classList.add('local');emins.classList.add('local');efill.classList.add('local');}
+  else{tcin.classList.remove('local');emins.classList.remove('local');efill.classList.remove('local');}
 
   document.getElementById('tcard').classList.add('on');
   document.getElementById('etabar').classList.add('on');
@@ -686,28 +863,29 @@ function startNav(e,idx){
   updTurnCard(0);
   updEta(leg);
 
-  // Update polyline styles without re-importing (use existing renderer references)
   renderers.forEach((r,i)=>r.setOptions({polylineOptions:{
-    strokeColor:COLS[i%COLS.length],strokeOpacity:i===idx?1:.15,strokeWeight:i===idx?10:3,zIndex:i===idx?20:1,
+    strokeColor: routeMeta[i]?.isLocal ? LOCAL_COLS[0] : HWY_COLS[0],
+    strokeOpacity:i===gi?1:.15,strokeWeight:i===gi?10:3,zIndex:i===gi?20:1,
   }}));
 
   gmap.setZoom(15);
   gmap.setCenter({lat:leg.start_location.lat(),lng:leg.start_location.lng()});
-  document.getElementById('llbl').textContent='▶ Navigating';
+  document.getElementById('llbl').textContent=(meta.isLocal?'🏘 ':'▶ ')+'Navigating';
 
   if(navigator.geolocation){
     watchId=navigator.geolocation.watchPosition(pos=>{
       const ll={lat:pos.coords.latitude,lng:pos.coords.longitude};
-      if(!uMk){uMk=new google.maps.Marker({position:ll,map:gmap,zIndex:999,icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,fillColor:'#3d9ef5',fillOpacity:1,strokeColor:'#fff',strokeWeight:2.5}});}
+      if(!uMk){uMk=new google.maps.Marker({position:ll,map:gmap,zIndex:999,icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,fillColor:meta.isLocal?'#9b6dff':'#3d9ef5',fillOpacity:1,strokeColor:'#fff',strokeWeight:2.5}});}
       else uMk.setPosition(ll);
       gmap.panTo(ll);
       advStep(ll);
     },null,{enableHighAccuracy:true,maximumAge:1000});
   }else{
-    fitBounds(routes[idx]);
+    fitBounds(routes[gi]);
     toast('ℹ️ GPS unavailable — showing full route');
   }
 }
+
 function stopNav(){
   navMode=false;
   if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
@@ -718,7 +896,7 @@ function stopNav(){
   document.getElementById('navCont').style.display='none';
   document.getElementById('llbl').textContent='Live traffic data';
   document.getElementById('fitbtn').classList.add('on');
-  if(lastRes)drawAll(lastRes);
+  drawAllMeta();
   fitBounds(routes[selIdx]);
 }
 
@@ -799,7 +977,6 @@ function fH(h){const hh=Math.floor(h)%12||12,mm=h%1===0?'00':'30',ap=Math.floor(
 setInterval(()=>{if(!navMode&&cO&&cD)runDir();},90000);
 </script>
 
-<!-- Load Maps SDK with v=beta for new APIs -->
 <script>
 (function(){
   var k = GKEY;
