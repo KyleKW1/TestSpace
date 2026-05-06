@@ -376,7 +376,7 @@ async function initMap() {
   mapEl.style.height = window.innerHeight + 'px';
 
   const { Map } = await google.maps.importLibrary("maps");
-  const { DirectionsService, DirectionsRenderer, TrafficLayer } = await google.maps.importLibrary("routes");
+  const { DirectionsService, TrafficLayer } = await google.maps.importLibrary("routes");
   const { Geocoder } = await google.maps.importLibrary("geocoding");
 
   gmap = new Map(mapEl, {
@@ -390,8 +390,8 @@ async function initMap() {
   tLayer   = new TrafficLayer();
   tLayer.setMap(gmap);
 
-  // Store constructors for later use
-  window._DirRenderer = DirectionsRenderer;
+  // NOTE: Do NOT cache DirectionsRenderer here — import it fresh in drawAll()
+  // to avoid constructor reference issues in sandboxed/CSP environments.
 
   document.addEventListener('click', e => {
     if (!e.target.closest('#ow')) closeDrop('o');
@@ -430,7 +430,6 @@ async function fetchSug(w, q) {
 function renderSug(w, suggestions) {
   ac[w].s = suggestions; ac[w].fi = -1;
   showDrop(w, suggestions.slice(0,6).map((s,i) => {
-    // New API returns PlacePrediction objects
     const pred = s.placePrediction;
     const main = pred.mainText?.toString() || pred.text?.toString() || '';
     const secondary = pred.secondaryText?.toString() || '';
@@ -441,6 +440,7 @@ function renderSug(w, suggestions) {
   }).join(''));
 }
 
+/* FIX 1: Safely extract lat/lng and text fields from the new Places API */
 async function pickSug(e, w, i) {
   e.preventDefault();
   const suggestion = ac[w].s[i];
@@ -451,13 +451,24 @@ async function pickSug(e, w, i) {
   try {
     const place = pred.toPlace();
     await place.fetchFields({ fields: ['location', 'formattedAddress', 'displayName'] });
+
+    // Safely extract LatLng — new Places API may return object or LatLng instance
     const loc = place.location;
-    setConf(w,
-      place.displayName || fi(w).value,
-      place.formattedAddress || '',
-      loc.lat(), loc.lng()
-    );
-    toast('✅ ' + (place.displayName || 'Location') + ' confirmed', 'ok');
+    const lat = typeof loc.lat === 'function' ? loc.lat() : Number(loc.lat);
+    const lng = typeof loc.lng === 'function' ? loc.lng() : Number(loc.lng);
+
+    // displayName and formattedAddress may be plain strings or objects with .text
+    const name = (typeof place.displayName === 'object' && place.displayName !== null)
+      ? (place.displayName.text || place.displayName.toString())
+      : (place.displayName || fi(w).value);
+    const addr = (typeof place.formattedAddress === 'object' && place.formattedAddress !== null)
+      ? (place.formattedAddress.text || place.formattedAddress.toString())
+      : (place.formattedAddress || '');
+
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) throw new Error('No valid coordinates returned');
+
+    setConf(w, name, addr, lat, lng);
+    toast('✅ ' + name + ' confirmed', 'ok');
   } catch(err) {
     console.error('Place details error:', err);
     geoFallback(w, fi(w).value);
@@ -602,14 +613,14 @@ function runDir(){
 }
 function doRerun(){if(cO&&cD)runDir();}
 
-/* DRAW */
+/* DRAW — FIX 2: import DirectionsRenderer fresh each time, never cache on window */
 function clearR(){renderers.forEach(r=>r.setMap(null));renderers=[];}
-function drawAll(res){
+async function drawAll(res){
   clearR();
-  const DirRenderer = window._DirRenderer;
+  const { DirectionsRenderer } = await google.maps.importLibrary("routes");
   res.routes.forEach((_,i)=>{
     const sel=i===selIdx;
-    const r=new DirRenderer({
+    const r=new DirectionsRenderer({
       map:gmap, routeIndex:i, directions:res,
       suppressInfoWindows:true, suppressMarkers:i>0,
       polylineOptions:{strokeColor:COLS[i%COLS.length],strokeOpacity:sel?.95:.22,strokeWeight:sel?9:4,zIndex:sel?10:1},
@@ -640,11 +651,14 @@ function buildRouteList(rts){
       <button class="startbtn" onclick="startNav(event,${r.i})">▶ START NAVIGATION</button>
     </div>`).join('');
 }
-function selRoute(i){
+
+/* FIX 3: selRoute also needs to import DirectionsRenderer fresh */
+async function selRoute(i){
   selIdx=i;
   document.querySelectorAll('.rcard').forEach(c=>c.classList.remove('sel'));
   document.getElementById('rc'+i)?.classList.add('sel');
-  renderers.forEach((r,j)=>r.setOptions({polylineOptions:{strokeColor:COLS[j%COLS.length],strokeOpacity:j===i?.95:.22,strokeWeight:j===i?9:4,zIndex:j===i?10:1}}));
+  // Re-draw all routes with new selection highlighted
+  if(lastRes) await drawAll(lastRes);
   fitBounds(routes[i]);
 }
 
@@ -672,6 +686,7 @@ function startNav(e,idx){
   updTurnCard(0);
   updEta(leg);
 
+  // Update polyline styles without re-importing (use existing renderer references)
   renderers.forEach((r,i)=>r.setOptions({polylineOptions:{
     strokeColor:COLS[i%COLS.length],strokeOpacity:i===idx?1:.15,strokeWeight:i===idx?10:3,zIndex:i===idx?20:1,
   }}));
@@ -790,7 +805,6 @@ setInterval(()=>{if(!navMode&&cO&&cD)runDir();},90000);
   var k = GKEY;
   if(!k){ document.getElementById('stxt').textContent='Add your Google Maps API key'; buildChart(); return; }
   var s = document.createElement('script');
-  // v=beta unlocks importLibrary() and new Places/Routes APIs
   s.src = 'https://maps.googleapis.com/maps/api/js?key=' + k + '&v=beta&libraries=maps,places,routes,geocoding,marker&callback=initMap&loading=async';
   s.async = true; s.defer = true;
   s.onerror = function(){ document.getElementById('stxt').textContent='✕ Failed to load Maps — check API key'; };
